@@ -1,22 +1,21 @@
-# OS
-.DS_Store
+# Credentials -- never commit
+.env
+*.json.key
+*-service-account*.json
+mobius-*.json
 
 # Python
 __pycache__/
-*.py[cod]
+*.pyc
 .venv/
-venv/
-*.egg-info/
 
-# Node
-node_modules/
-dist/
-build/
-
-# Env / secrets
-.env
-.env.*
-!.env.example
-
-# Claude Code local state
-.claude/settings.local.json
+# Captured data and run artifacts
+*.mp4
+*.npz
+annotated*.jpg
+test_scene.jpg
+# Local Antioch state and environment caches
+.antioch/
+.uv-cache/
+.mypy_cache/
+.pytest_cache/
