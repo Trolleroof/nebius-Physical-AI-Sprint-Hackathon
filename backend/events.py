@@ -128,8 +128,12 @@ class CurriculumReady(BaseEvent):
     curriculum_id: str
     changes: list[SimChange]
     n_scenarios: int
-    #: What the parameter was before adaptation, so the UI can show 0.60 -> 0.20-0.50.
+    #: What the parameter was before adaptation, so the UI can show 0.32 -> 0.24-0.40.
     baseline: dict[str, float] = Field(default_factory=dict)
+    #: Set when the diagnosis names a failure the scenario cannot reproduce.
+    #: An empty curriculum with a stated reason is a finding about the
+    #: simulator; an empty curriculum with no reason just looks broken.
+    unmappable_reason: str | None = None
 
 
 class BatchStarted(BaseEvent):

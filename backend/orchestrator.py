@@ -37,7 +37,7 @@ from events import (
     SimStarted,
     VideoReady,
 )
-from mapper import baseline_for, map_diagnosis
+from mapper import baseline_for, map_diagnosis, unmappable_reason
 from schemas import FailureDiagnosis, MetricRow, PolicyMetrics, SimChange
 from state import bus
 
@@ -198,8 +198,9 @@ class Orchestrator:
                 run_id=run_id,
                 curriculum_id=f"curr-{run_id}",
                 changes=self.curriculum,
-                n_scenarios=n_scenarios,
+                n_scenarios=n_scenarios if self.curriculum else 0,
                 baseline=baseline_for(self.curriculum),
+                unmappable_reason=unmappable_reason(self.diagnosis),
             )
         )
         return self.curriculum
