@@ -16,6 +16,7 @@ import asyncio
 import json
 import os
 import random
+from pathlib import Path
 from typing import AsyncIterator, Protocol
 
 from schemas import SimChange
@@ -103,22 +104,44 @@ class AntiochCLI:
 
     @staticmethod
     def _succeeded(run: dict) -> bool | None:
-        """None while still running; True/False once the run has settled."""
-        status = str(run.get("status") or run.get("state") or "").lower()
-        if status in {"queued", "running", "pending", "dispatched", ""}:
-            return None
-        if status in {"failed", "error", "cancelled", "timeout"}:
-            return False
+        """None while the run is still going; True/False once it has settled.
 
-        results = run.get("results") or {}
-        for key in ("success", "passed", "task_success", "cube_in_tray"):
-            if key in results:
-                return bool(results[key])
-            if key in run:
-                return bool(run[key])
-        # Settled with no recognisable success key: treat completion as pass
-        # and let the check above be corrected once a real run is inspected.
-        return status in {"succeeded", "success", "passed", "completed", "complete"}
+        A scenario run declares its own verdict through `run.check(...)` and
+        is PASSED only if every check passed, so `outcome` is the whole story
+        and we do not second-guess it. ERRORED counts as a failure: a crashed
+        scenario did not demonstrate the policy handling that case.
+        """
+        outcome = str(run.get("outcome") or "").upper()
+        if outcome in {"PASSED", "SUCCEEDED"}:
+            return True
+        if outcome in {"FAILED", "ERRORED", "CANCELLED", "TIMEOUT"}:
+            return False
+        return None  # still queued or running
+
+    async def download_artifacts(
+        self, run_id: str, dest: Path, artifact: str | None = None
+    ) -> list[Path]:
+        """Pull a run's artifacts into our own tree so we can serve them.
+
+        Antioch hands out signed object-storage URLs that expire, so nothing
+        from a run can be embedded in the dashboard directly. Everything the
+        UI shows has to be copied down and served from ``/artifacts`` by our
+        own backend — which is also what makes the demo work offline if the
+        booth wifi dies.
+        """
+        dest.mkdir(parents=True, exist_ok=True)
+        args = ["scenario", "download", run_id, "-o", str(dest), "--force", "--json"]
+        if artifact:
+            args += ["--artifact", artifact]
+
+        manifest = await self._cli(*args)
+        entries = manifest.get("artifacts", manifest) if isinstance(manifest, dict) else manifest
+        paths = []
+        for entry in entries if isinstance(entries, list) else []:
+            target = entry.get("destination") or entry.get("path") if isinstance(entry, dict) else entry
+            if target:
+                paths.append(Path(str(target)))
+        return paths
 
     async def run_batch(
         self, n: int, changes: list[SimChange], seed: int = 0

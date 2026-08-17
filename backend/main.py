@@ -14,9 +14,12 @@ import asyncio
 import json
 from typing import AsyncIterator
 
+from pathlib import Path
+
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from orchestrator import orchestrator
@@ -24,6 +27,15 @@ from schemas import PolicyMetrics
 from state import RunStatus, bus
 
 app = FastAPI(title="Continual Embodied Learning", version="0.1.0")
+
+#: Rollout videos, batch thumbnails and saved diagnoses.
+#:
+#: Antioch's own artifact URLs are signed and expire, so anything the
+#: dashboard displays is downloaded here first and served by us. That also
+#: means the demo keeps working with no network, which matters at a booth.
+ARTIFACTS = Path(__file__).resolve().parent.parent / "artifacts"
+for subdir in ("videos", "demo/batch", "diagnoses", "evals"):
+    (ARTIFACTS / subdir).mkdir(parents=True, exist_ok=True)
 
 # The dashboard runs on a different port in dev, and at a booth it may be
 # opened from a second machine, so origins stay open on a local network.
@@ -33,6 +45,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+app.mount("/artifacts", StaticFiles(directory=ARTIFACTS), name="artifacts")
 
 
 class Ack(BaseModel):
