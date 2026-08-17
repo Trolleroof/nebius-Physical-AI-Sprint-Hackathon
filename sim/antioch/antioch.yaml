@@ -1,7 +1,7 @@
 # The id is the immutable identity used by Antioch machines.
 id: "antioch-4c5b06ecbbf24226aad651a21954bc53"
 name: "antioch"
-scenario_paths: ["src/scenarios.py", "src/pick_place.py"]
+scenario_paths: ["src/scenarios.py", "src/pick_place.py", "src/close_pick.py", "src/probe_wrist_camera.py"]
 
 services:
   sim:

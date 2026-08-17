@@ -102,10 +102,10 @@ def _add_mesh_block(world, position: tuple[float, float, float], *, prim_path: s
     return BlockHandle(prim_path)
 
 
-def _try_load_antioch_asset(world, position: tuple[float, float, float], *, prim_path: str):
+def _try_load_antioch_asset(world, position: tuple[float, float, float], *, prim_path: str, mass: float):
     """Load the hackathon asset and isolate SM_TrapezoidRed_01."""
     import antioch
-    from pxr import Gf, Usd, UsdGeom
+    from pxr import Gf, PhysxSchema, UsdGeom, UsdPhysics
     from isaacsim.core.utils.prims import get_prim_at_path
     from isaacsim.core.utils.stage import get_current_stage
 
@@ -125,6 +125,17 @@ def _try_load_antioch_asset(world, position: tuple[float, float, float], *, prim
     xform = UsdGeom.Xformable(get_prim_at_path(src_path))
     xform.ClearXformOpOrder()
     xform.AddTranslateOp().Set(Gf.Vec3d(x, y, z_centre - HEIGHT / 2.0))
+
+    # The shared USD is render-only. Give the selected mesh its own convex
+    # collider and explicit positive mass before the first world reset; without
+    # this, PhysX creates an invalid rigid body and the block falls through the
+    # ground.
+    prim = get_prim_at_path(src_path)
+    UsdPhysics.CollisionAPI.Apply(prim)
+    UsdPhysics.MeshCollisionAPI.Apply(prim).CreateApproximationAttr("convexHull")
+    UsdPhysics.RigidBodyAPI.Apply(prim).CreateRigidBodyEnabledAttr(True)
+    UsdPhysics.MassAPI.Apply(prim).CreateMassAttr(mass)
+    PhysxSchema.PhysxRigidBodyAPI.Apply(prim)
 
     # Hide sibling prims from the kit so only the red trapezoid is visible.
     root = stage.GetPrimAtPath(staging)
@@ -150,7 +161,7 @@ def add_trapezoid_block(
 
     if prefer_asset:
         try:
-            return _try_load_antioch_asset(world, position, prim_path=prim_path)
+            return _try_load_antioch_asset(world, position, prim_path=prim_path, mass=mass)
         except Exception:
             pass
 
