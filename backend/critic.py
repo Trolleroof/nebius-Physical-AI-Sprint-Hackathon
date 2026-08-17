@@ -15,10 +15,33 @@ a badly behaved model degrades to "critic unsure" instead of killing the run.
 from __future__ import annotations
 
 import asyncio
+import json
+import mimetypes
 import os
+import sys
+from pathlib import Path
 from typing import Protocol
 
 from schemas import FailureDiagnosis, parse_diagnosis
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def _load_root_env() -> None:
+    """Read the repo-root .env into os.environ, without overriding real env.
+
+    Keeps the API key out of the repo (the file is gitignored) while letting
+    both uvicorn and the standalone scripts pick it up with zero setup.
+    """
+    env_file = ROOT / ".env"
+    if not env_file.exists():
+        return
+    for line in env_file.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        os.environ.setdefault(key.strip(), value.strip().strip("'\""))
 
 DEFAULT_TASK = "Put the green cube in the blue tray."
 
@@ -94,15 +117,115 @@ class MockCritic:
         )
 
 
+class GeminiCritic:
+    """Gemini Robotics ER 2 as the embodied reasoning critic.
+
+    Sends the rollout video to ``gemini-robotics-er-2-preview`` with the
+    response constrained to the FailureDiagnosis schema, so the model cannot
+    answer outside the closed vocabulary. The reply still goes through
+    ``parse_diagnosis`` — the schema constrains, the parser decides.
+
+    Any failure after construction degrades to a zero-confidence "unknown"
+    diagnosis rather than raising: the module contract is that a dead critic
+    reads as "critic unsure" on the dashboard, never as a dead demo.
+    """
+
+    MODEL = os.environ.get("GEMINI_MODEL", "gemini-robotics-er-2-preview")
+    #: Above this the request goes through the Files API instead of inline.
+    INLINE_LIMIT = 19 * 1024 * 1024
+    #: The API samples video at 1 fps by default, which can miss a fast grasp.
+    FPS = 3.0
+    TIMEOUT_S = float(os.environ.get("CRITIC_TIMEOUT_S", "75"))
+
+    def __init__(self) -> None:
+        _load_root_env()
+        if not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")):
+            raise RuntimeError(
+                "CRITIC_BACKEND=gemini needs GEMINI_API_KEY — create one at "
+                "aistudio.google.com/apikey and put it in the repo-root .env."
+            )
+        # Imported here so the mock path never needs the SDK installed.
+        from google import genai
+
+        self._client = genai.Client()
+
+    @staticmethod
+    def _resolve(video_path: str) -> Path:
+        """Map an event-stream URL like /artifacts/videos/x.mp4 to a real file."""
+        candidates = (Path(video_path), ROOT / video_path.lstrip("/\\"))
+        for path in candidates:
+            if path.is_file():
+                return path
+        raise FileNotFoundError(f"no rollout video at {video_path}")
+
+    async def analyze(self, video_path: str, task: str = DEFAULT_TASK) -> FailureDiagnosis:
+        try:
+            return await asyncio.wait_for(self._analyze(video_path, task), self.TIMEOUT_S)
+        except Exception as exc:  # noqa: BLE001 — degrade, never kill the run
+            print(f"[critic] {type(exc).__name__}: {exc}", file=sys.stderr)
+            return parse_diagnosis(
+                {
+                    "success": False,
+                    "stage": "unknown",
+                    "failure": "unknown",
+                    "confidence": 0.0,
+                    "summary": f"Critic unavailable ({type(exc).__name__}) — rollout is undiagnosed.",
+                }
+            )
+
+    async def _analyze(self, video_path: str, task: str) -> FailureDiagnosis:
+        from google.genai import types
+
+        path = self._resolve(video_path)
+        mime = mimetypes.guess_type(path.name)[0] or "video/mp4"
+        metadata = types.VideoMetadata(fps=self.FPS)
+
+        data = path.read_bytes()
+        if len(data) <= self.INLINE_LIMIT:
+            video = types.Part(
+                inline_data=types.Blob(data=data, mime_type=mime), video_metadata=metadata
+            )
+        else:
+            upload = await self._client.aio.files.upload(file=path)
+            while upload.state and upload.state.name == "PROCESSING":
+                await asyncio.sleep(2.0)
+                upload = await self._client.aio.files.get(name=upload.name)
+            if upload.state and upload.state.name == "FAILED":
+                raise RuntimeError(f"Gemini rejected the upload of {path.name}")
+            video = types.Part(
+                file_data=types.FileData(file_uri=upload.uri, mime_type=upload.mime_type or mime),
+                video_metadata=metadata,
+            )
+
+        response = await self._client.aio.models.generate_content(
+            model=self.MODEL,
+            # Video first, instruction after — the documented best practice.
+            contents=[video, "Analyse this rollout and return the diagnosis."],
+            config=types.GenerateContentConfig(
+                system_instruction=CRITIC_PROMPT.format(task=task),
+                response_mime_type="application/json",
+                response_schema=FailureDiagnosis,
+                # "medium" measured ~26 s on a 5 s clip, "low" ~4 s. A judge
+                # is waiting, so demo day can flip this without touching code.
+                thinking_config=types.ThinkingConfig(
+                    thinking_level=os.environ.get("GEMINI_THINKING", "medium")
+                ),
+            ),
+        )
+        return parse_diagnosis(json.loads(response.text or "{}"))
+
+
 def get_critic() -> Critic:
     """Pick the critic implementation.
 
-    Set CRITIC_BACKEND to something other than "mock" once a real one exists;
-    add the branch here and nothing else in the codebase changes.
+    CRITIC_BACKEND=mock (default) needs nothing; CRITIC_BACKEND=gemini uses
+    Gemini Robotics ER 2 and needs GEMINI_API_KEY in the env or root .env.
     """
     backend = os.environ.get("CRITIC_BACKEND", "mock").lower()
     if backend == "mock":
         return MockCritic()
+    if backend in {"gemini", "er2", "gemini-er2"}:
+        return GeminiCritic()
     raise NotImplementedError(
         f"CRITIC_BACKEND={backend!r} has no implementation yet. "
         "Add it in backend/critic.py; it must satisfy the Critic protocol."

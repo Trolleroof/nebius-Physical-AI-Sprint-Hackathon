@@ -78,6 +78,25 @@ class AntiochCLI:
     TIMEOUT_S = float(os.environ.get("ANTIOCH_TIMEOUT_S", "300"))
     POLL_S = 3.0
 
+    @classmethod
+    def _binary(cls) -> str:
+        """Prefer the sim project's own venv CLI over whatever is on PATH.
+
+        The hackathon guide is explicit that a bare `antioch` on PATH may be
+        a different binary; the one installed next to antioch.yaml is the one
+        that belongs to this project.
+        """
+        override = os.environ.get("ANTIOCH_BIN")
+        if override:
+            return override
+        for candidate in (
+            cls.PROJECT_DIR / ".venv" / "Scripts" / "antioch.exe",  # Windows
+            cls.PROJECT_DIR / ".venv" / "bin" / "antioch",
+        ):
+            if candidate.exists():
+                return str(candidate)
+        return "antioch"
+
     async def _cli(self, *args: str) -> dict | list:
         if not (self.PROJECT_DIR / "antioch.yaml").exists():
             raise RuntimeError(
@@ -86,7 +105,7 @@ class AntiochCLI:
             )
 
         process = await asyncio.create_subprocess_exec(
-            "antioch",
+            self._binary(),
             *args,
             cwd=str(self.PROJECT_DIR),
             stdout=asyncio.subprocess.PIPE,
