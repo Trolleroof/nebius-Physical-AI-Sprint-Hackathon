@@ -68,20 +68,41 @@ class AntiochCLI:
 
     #: Authored scenario to run. Override with ANTIOCH_SCENARIO.
     SCENARIO = os.environ.get("ANTIOCH_SCENARIO", "so101_pick_place")
+    #: The CLI resolves its project from antioch.yaml in the working
+    #: directory, so every call runs from the sim project rather than from
+    #: wherever uvicorn happened to be started.
+    PROJECT_DIR = Path(
+        os.environ.get("ANTIOCH_PROJECT", Path(__file__).resolve().parent.parent / "sim" / "antioch")
+    )
     #: How long to wait for a queued run before giving up on it.
     TIMEOUT_S = float(os.environ.get("ANTIOCH_TIMEOUT_S", "300"))
     POLL_S = 3.0
 
     async def _cli(self, *args: str) -> dict | list:
+        if not (self.PROJECT_DIR / "antioch.yaml").exists():
+            raise RuntimeError(
+                f"No antioch.yaml under {self.PROJECT_DIR}. Set ANTIOCH_PROJECT to the "
+                "directory holding it, or keep using SIM_BACKEND=mock."
+            )
+
         process = await asyncio.create_subprocess_exec(
             "antioch",
             *args,
+            cwd=str(self.PROJECT_DIR),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
         stdout, stderr = await process.communicate()
         if process.returncode != 0:
-            raise RuntimeError(f"antioch {' '.join(args)} failed: {stderr.decode().strip()}")
+            detail = stderr.decode().strip() or stdout.decode().strip()
+            # The overwhelmingly common cause, and the one whose native
+            # message gives no hint about what to do next.
+            if "auth" in detail.lower() or "authenticated" in detail.lower():
+                raise RuntimeError(
+                    "Antioch is not authenticated. Run `antioch auth login` in "
+                    f"{self.PROJECT_DIR}, then retry."
+                )
+            raise RuntimeError(f"antioch {' '.join(args)} failed: {detail}")
         return json.loads(stdout.decode() or "{}")
 
     @staticmethod
