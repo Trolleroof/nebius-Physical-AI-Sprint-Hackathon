@@ -1,19 +1,43 @@
 # SO-101 on this Mac — Guide 1 runbook
 
-Environment is already built. Everything below runs in the `lerobot` conda env.
+Environment is built. Everything below runs in the `~/lerobot-env` venv.
 
 | Piece | Value |
 | ----- | ----- |
-| Env | conda env `lerobot` at `/opt/anaconda3/envs/lerobot` |
+| Env | uv venv at `~/lerobot-env` |
 | Python | 3.10.20 |
 | lerobot | 0.4.4 (the version the hackathon guides are tested against) |
 | torch | 2.10.0, MPS available (no CUDA on Mac, and none needed) |
-| ffmpeg | 9.0.1 via conda-forge (used for dataset video encoding) |
-| opencv | 5.0.0 with Cocoa GUI support |
+| ffmpeg | 8.1 from Homebrew (lerobot shells out to it for dataset video encoding) |
+| opencv | 4.12.0 |
+
+uv, not conda: there is no conda on this Mac — the `conda` shell function in
+`~/.zshrc` is a leftover that points at nothing, so every `conda` command dies
+with `permission denied`. Ignore it.
 
 ```bash
-conda activate lerobot
+source ~/lerobot-env/bin/activate
 ```
+
+## Step 1 — rebuild the environment (only if it is missing)
+
+```bash
+./setup_env.sh
+```
+
+Idempotent, takes about a minute. Needs `uv` and `brew install ffmpeg`.
+
+## Step 1b — check everything at once
+
+```bash
+python preflight.py
+```
+
+Python, lerobot, torch/MPS, opencv, ffmpeg, live serial ports, `$LEADER` /
+`$FOLLOWER` still pointing at real ports, calibration profiles, and whether the
+camera actually returns frames. FAIL means the next command will not work; WARN
+is fine until you reach that step. Run it at the start of every session — it
+catches the renumbered port and the denied camera before they cost you an hour.
 
 ## Step 2 — find the serial ports
 
@@ -29,6 +53,11 @@ on macOS it dumps ~150 pty devices around the answer, so the `ls` is easier to r
 
 Port names are **not** stable across reboots and replugs — re-check them at the
 start of every session. You do not need `sudo`, `chmod`, or udev rules on macOS.
+
+When no port appears, `./usbcheck.py` says whether the arm is even enumerating —
+it decodes the USB bus by interface class, so it separates "bad cable, nothing on
+the bus" from "device is there but no serial driver attached". `./usbcheck.py
+--watch` prints arrivals live while you replug.
 
 ## Step 3 — tell the two arms apart
 
@@ -100,7 +129,10 @@ lerobot-record --help    # camera and dataset flags
 ```
 
 **Grant your terminal camera access first**: System Settings → Privacy & Security →
-Camera. Without it capture returns black frames and reports no error at all.
+Camera. Without it capture returns black frames and reports no error at all —
+right now this Mac has *not* granted it, and `lerobot-find-cameras opencv` finds
+zero cameras with `not authorized to capture video`. `preflight.py` checks the
+same thing in one line.
 
 Episodes land in `~/.cache/huggingface/lerobot/<your-repo-id>/` as video + parquet,
 which is what `lerobot-train` consumes (Guide 3).
@@ -112,3 +144,11 @@ which is what `lerobot-train` consumes (Guide 3).
   `lerobot.robots.so_follower` and `lerobot.teleoperators.so_leader` (unified
   SO-100/SO-101 modules), not `lerobot.robots.so101_follower`.
 - Flags shift slightly between lerobot releases — `<command> --help` is the truth.
+- The `lerobot-*` commands live in `~/lerobot-env/bin` and are on PATH once the
+  venv is activated; without activating, call them by full path.
+
+## What is not done yet
+
+Steps 3–7 need hardware on the desk. As of this setup nothing is plugged in:
+no `/dev/tty.usbmodem*`, no calibration profiles, and the terminal has no camera
+permission. Everything that can be done without an arm is done.
