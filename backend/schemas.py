@@ -62,33 +62,32 @@ class FailureMode(str, Enum):
 class SimParameter(str, Enum):
     """The only simulator knobs the mapper is permitted to turn.
 
-    Add an entry here only once we can actually vary it in Antioch.
+    These are exactly the keyword arguments of ``so101_pick_place`` in
+    sim/antioch/src/pick_place.py. That signature *is* the parameter schema:
+    Antioch rejects an unknown ``--set`` key at dispatch, so a parameter
+    invented here would surface as a hard failure rather than a silent no-op.
+
+    Anything not on this list cannot currently be varied. Notably absent:
+    friction, mass, object yaw, and any injected noise. Adding one means
+    adding a typed keyword argument to the scenario first.
     """
 
-    OBJECT_FRICTION = "object_friction"
-    OBJECT_MASS = "object_mass"
-    OBJECT_X = "object_x"
-    OBJECT_Y = "object_y"
-    OBJECT_YAW = "object_yaw"
-    GRASP_POSE_NOISE = "grasp_pose_noise"
-    CAMERA_POSE_NOISE = "camera_pose_noise"
-    ACTION_DELAY = "action_delay"
-    JOINT_TARGET_NOISE = "joint_target_noise"
+    PICK_X = "pick_x"
+    PICK_Y = "pick_y"
+    PLACE_X = "place_x"
+    PLACE_Y = "place_y"
+    TRAVEL_Z = "travel_z"
 
 
-#: Hard limits per parameter, as ``(floor, ceiling, unit)``.  The critic may
+#: Hard limits per parameter, as ``(floor, ceiling, unit)``, taken from the
+#: ``ge=``/``le=`` on each ``antioch.param`` in the scenario. The critic may
 #: recommend anything; the mapper clamps into these before Antioch sees them.
-#: Numbers are placeholders until Person 1 confirms what the scenario accepts.
 PARAMETER_BOUNDS: dict[SimParameter, tuple[float, float, str]] = {
-    SimParameter.OBJECT_FRICTION: (0.05, 1.50, "mu"),
-    SimParameter.OBJECT_MASS: (0.50, 2.00, "x nominal"),
-    SimParameter.OBJECT_X: (-0.10, 0.10, "m"),
-    SimParameter.OBJECT_Y: (-0.10, 0.10, "m"),
-    SimParameter.OBJECT_YAW: (-45.0, 45.0, "deg"),
-    SimParameter.GRASP_POSE_NOISE: (0.0, 15.0, "mm"),
-    SimParameter.CAMERA_POSE_NOISE: (0.0, 10.0, "mm"),
-    SimParameter.ACTION_DELAY: (0.0, 100.0, "ms"),
-    SimParameter.JOINT_TARGET_NOISE: (0.0, 5.0, "deg"),
+    SimParameter.PICK_X: (0.15, 0.45, "m"),
+    SimParameter.PICK_Y: (-0.35, 0.35, "m"),
+    SimParameter.PLACE_X: (0.15, 0.45, "m"),
+    SimParameter.PLACE_Y: (-0.35, 0.35, "m"),
+    SimParameter.TRAVEL_Z: (0.06, 0.30, "m"),
 }
 
 

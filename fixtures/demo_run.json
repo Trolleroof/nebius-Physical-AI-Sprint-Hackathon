@@ -14,7 +14,7 @@
       "seq": 0,
       "type": "sim_started",
       "policy": "v0",
-      "scenario": "cube_to_tray_baseline",
+      "scenario": "so101_pick_place",
       "n_episodes": 30
     },
     {
@@ -67,7 +67,7 @@
       "seq": 6,
       "type": "deploy_started",
       "policy": "v0",
-      "condition": "cube +4cm right, low-friction surface"
+      "condition": "block +6cm right of its trained position"
     },
     {
       "ts": 1755432661.0,
@@ -84,7 +84,7 @@
       "seq": 8,
       "type": "real_failed",
       "policy": "v0",
-      "note": "Cube left the gripper mid-transport."
+      "note": "Gripper closed beside the block."
     },
     {
       "ts": 1755432663.5,
@@ -100,17 +100,17 @@
       "type": "diagnosis_ready",
       "diagnosis": {
         "success": false,
-        "stage": "transport",
-        "failure": "object_slip",
-        "confidence": 0.91,
+        "stage": "grasp",
+        "failure": "failed_grasp",
+        "confidence": 0.88,
         "estimated_causes": [
           {
-            "cause": "low_friction",
-            "confidence": 0.72
+            "cause": "lateral_offset",
+            "confidence": 0.69
           },
           {
-            "cause": "grasp_offset",
-            "confidence": 0.21
+            "cause": "reach_error",
+            "confidence": 0.24
           },
           {
             "cause": "other",
@@ -119,25 +119,19 @@
         ],
         "recommended_sim_changes": [
           {
-            "parameter": "object_friction",
-            "min": 0.2,
-            "max": 0.5,
+            "parameter": "pick_y",
+            "min": -0.18,
+            "max": 0.1,
             "clamped": false
           },
           {
-            "parameter": "grasp_pose_noise",
-            "min": 0.0,
-            "max": 8.0,
-            "clamped": false
-          },
-          {
-            "parameter": "object_mass",
-            "min": 0.5,
-            "max": 2.4,
+            "parameter": "pick_x",
+            "min": 0.15,
+            "max": 0.45,
             "clamped": false
           }
         ],
-        "summary": "The gripper closed slightly off-centre and the cube rotated free during transport."
+        "summary": "The gripper closed beside the block rather than around it, catching only its near edge."
       },
       "latency_ms": 4200
     },
@@ -149,29 +143,22 @@
       "curriculum_id": "curr-001",
       "changes": [
         {
-          "parameter": "object_friction",
-          "min": 0.2,
-          "max": 0.5,
+          "parameter": "pick_y",
+          "min": -0.18,
+          "max": 0.1,
           "clamped": false
         },
         {
-          "parameter": "grasp_pose_noise",
-          "min": 0.0,
-          "max": 8.0,
-          "clamped": false
-        },
-        {
-          "parameter": "object_mass",
-          "min": 0.8,
-          "max": 1.3,
+          "parameter": "pick_x",
+          "min": 0.24,
+          "max": 0.4,
           "clamped": true
         }
       ],
       "n_scenarios": 30,
       "baseline": {
-        "object_friction": 0.6,
-        "grasp_pose_noise": 0.0,
-        "object_mass": 1.0
+        "pick_y": -0.06,
+        "pick_x": 0.32
       }
     },
     {
@@ -532,7 +519,7 @@
       "seq": 46,
       "type": "redeploy_started",
       "policy": "v1",
-      "condition": "cube +4cm right, low-friction surface"
+      "condition": "block +6cm right of its trained position"
     },
     {
       "ts": 1755432750.3,
@@ -549,7 +536,7 @@
       "seq": 48,
       "type": "real_success",
       "policy": "v1",
-      "note": "Cube placed in tray under the same condition."
+      "note": "Block placed in tray under the same condition."
     }
   ]
 }

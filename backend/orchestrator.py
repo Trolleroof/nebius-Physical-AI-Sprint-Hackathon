@@ -42,7 +42,7 @@ from schemas import FailureDiagnosis, MetricRow, PolicyMetrics, SimChange
 from state import bus
 
 #: The controlled out-of-distribution condition from plan section 8.
-CONDITION = "cube +4cm right, low-friction surface"
+CONDITION = "block +6cm right of its trained position"
 
 SIM_PASS_THRESHOLD = 0.8
 
@@ -87,7 +87,7 @@ class Orchestrator:
 
         await bus.publish(
             SimStarted(
-                run_id=run_id, policy=policy, scenario="cube_to_tray_baseline", n_episodes=n_episodes
+                run_id=run_id, policy=policy, scenario="so101_pick_place", n_episodes=n_episodes
             )
         )
 
@@ -152,13 +152,13 @@ class Orchestrator:
         if succeeded:
             await bus.publish(
                 RealSuccess(
-                    run_id=run_id, policy=policy, note="Cube placed in tray under the same condition."
+                    run_id=run_id, policy=policy, note="Block placed in tray under the same condition."
                 )
             )
         else:
             await bus.publish(
                 RealFailed(
-                    run_id=run_id, policy=policy, note="Cube left the gripper mid-transport."
+                    run_id=run_id, policy=policy, note="Gripper closed beside the block."
                 )
             )
         return succeeded

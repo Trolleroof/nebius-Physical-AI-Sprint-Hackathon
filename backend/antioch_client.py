@@ -62,15 +62,12 @@ class AntiochCLI:
     `--set` takes single values, so the curriculum's ranges are sampled into
     one concrete parameter set per run (see mapper.sample_curriculum).
 
-    TWO THINGS STILL NEED CONFIRMING FROM WHOEVER OWNS THE SIM:
-      * SCENARIO — the authored scenario's name.
-      * _succeeded() — which key in a finished run's JSON means "passed".
-        The guesses below cover the obvious shapes; check one real run with
-        `antioch scenario show <id> --json` and fix it in one place.
+    Targets `so101_pick_place` in sim/antioch/src/pick_place.py, whose
+    keyword arguments are the whitelist in schemas.SimParameter.
     """
 
     #: Authored scenario to run. Override with ANTIOCH_SCENARIO.
-    SCENARIO = os.environ.get("ANTIOCH_SCENARIO", "cube_to_tray")
+    SCENARIO = os.environ.get("ANTIOCH_SCENARIO", "so101_pick_place")
     #: How long to wait for a queued run before giving up on it.
     TIMEOUT_S = float(os.environ.get("ANTIOCH_TIMEOUT_S", "300"))
     POLL_S = 3.0
