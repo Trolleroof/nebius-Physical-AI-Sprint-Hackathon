@@ -16,10 +16,10 @@ import { ImprovementStrip } from "@/components/ImprovementStrip";
 import { LoopRail } from "@/components/LoopRail";
 import { RealityToSim } from "@/components/RealityToSim";
 import { StageView } from "@/components/StageView";
-import { useReplay } from "@/lib/useReplay";
+import { useRun } from "@/lib/useRun";
 
 export default function Dashboard() {
-  const replay = useReplay();
+  const replay = useRun();
   const { state } = replay;
 
   return (
@@ -27,7 +27,7 @@ export default function Dashboard() {
       <div className="ambient" />
 
       <div className="relative z-10 flex h-full flex-col">
-        <Header state={state} isFixture={replay.isFixture} />
+        <Header state={state} source={replay.source} />
 
         <div className="shrink-0 border-b border-[var(--color-line)] py-2">
           <LoopRail rail={state.rail} active={state.activeStage} cycle={state.cycle} />
