@@ -12,6 +12,8 @@ __pycache__/
 # Captured data and run artifacts
 *.mp4
 *.npz
+training/outputs/
+*.safetensors
 annotated*.jpg
 test_scene.jpg
 # Local Antioch state and environment caches
