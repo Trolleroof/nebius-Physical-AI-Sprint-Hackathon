@@ -104,10 +104,19 @@ class AntiochCLI:
                 "directory holding it, or keep using SIM_BACKEND=mock."
             )
 
+        env = dict(os.environ)
+        # antioch-sim imports fcntl/os.fchmod unconditionally, which do not
+        # exist on Windows; _win_shim provides both. Windows-only on purpose —
+        # on POSIX the shim would shadow the real stdlib module.
+        shim = self.PROJECT_DIR / "_win_shim"
+        if os.name == "nt" and shim.is_dir():
+            env["PYTHONPATH"] = str(shim) + os.pathsep + env.get("PYTHONPATH", "")
+
         process = await asyncio.create_subprocess_exec(
             self._binary(),
             *args,
             cwd=str(self.PROJECT_DIR),
+            env=env,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
