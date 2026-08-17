@@ -16,6 +16,8 @@ is right?"
 
 from __future__ import annotations
 
+import random
+
 from schemas import (
     PARAMETER_BOUNDS,
     FailureDiagnosis,
@@ -177,6 +179,36 @@ def map_diagnosis(diagnosis: FailureDiagnosis) -> list[SimChange]:
             change.clamped = True
         changes.append(change)
     return changes
+
+
+def sample_curriculum(changes: list[SimChange], n: int, seed: int = 0) -> list[dict[str, float]]:
+    """Turn ranges into n concrete parameter sets, one per scenario run.
+
+    The mapper reasons in ranges because that is what a diagnosis implies,
+    but Antioch's `--set KEY=VALUE` takes single values, so a curriculum of
+    thirty scenarios is thirty samples from those ranges.
+
+    Sampling is stratified rather than uniform: each parameter's range is cut
+    into n even bands and one value drawn per band, then shuffled. Uniform
+    sampling of thirty points routinely leaves gaps and clusters, and a gap
+    at the hard end of the friction range is exactly the case we are trying
+    to cover. Seeded, so a demo can be rehearsed against fixed scenarios.
+    """
+    if not changes or n <= 0:
+        return []
+
+    rng = random.Random(seed)
+    columns: dict[str, list[float]] = {}
+
+    for change in changes:
+        width = (change.max - change.min) / n
+        band_samples = [
+            round(change.min + width * (i + rng.random()), 4) for i in range(n)
+        ]
+        rng.shuffle(band_samples)
+        columns[change.parameter.value] = band_samples
+
+    return [{name: values[i] for name, values in columns.items()} for i in range(n)]
 
 
 def baseline_for(changes: list[SimChange]) -> dict[str, float]:
