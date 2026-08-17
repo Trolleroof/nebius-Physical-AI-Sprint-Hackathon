@@ -45,6 +45,15 @@ def so101_close_pick(
     # Measured by probe_tcp.py from a grasp cell that holds 3/3 trials.
     tcp_local = np.array([0.02098, 0.01385, -0.07704])
     finger_local = np.array([0.0, 0.0, -1.0])
+    # !! WRIST_ROLL WARNING !!  The physical arm's wrist_roll servo is BROKEN --
+    # the joint is taped at -pi/2 and must never be commanded off it.  The MuJoCo
+    # pipeline (sim/mujoco/env.py WRIST_ROLL_LOCK) pins it at -pi/2, and there it
+    # is verified that +pi/2 puts the hand UPSIDE DOWN.  The value below is
+    # +pi/2, i.e. 180 deg from the physical lock.
+    # This has NOT been flipped, because the Isaac `so101_antioch` asset may not
+    # share MuJoCo's joint sign convention, and guessing wrong would command the
+    # very 180 deg roll we are trying to prevent.  Confirm the sign against the
+    # Isaac asset before running this scenario on hardware-facing data.
     wrist_roll, jaw_open, jaw_closed = np.pi / 2.0, 0.85, 0.20
 
     def pose():

@@ -7,6 +7,7 @@ Scripted pick-and-place expert that produces LeRobot-ready episodes from
 |---|---|
 | `env.py` | `SO101Env` — thin MuJoCo wrapper: `reset` / `step` / `render` / `success` |
 | `collect.py` | the scripted expert + recorder + CLI |
+| `check_wrist_lock.py` | **gate**: proves `wrist_roll` cannot move (broken servo, taped at &minus;π/2). Both runners fail closed on it |
 | `run.ps1` | this Windows box: collect → `training/build_dataset.py` → `lerobot-train` |
 | `run.sh` | the Mac (`/opt/homebrew/Caskroom/miniforge/base/envs/lerobot`), same three stages |
 | `MODEL_NOTES.md`, `verify_model.py`, `scene.xml` | owned by the scene author — the measured contract this collector is calibrated against |

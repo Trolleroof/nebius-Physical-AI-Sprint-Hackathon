@@ -11,6 +11,34 @@ Context in one line: `sim/mujoco/` contains a verified local pipeline
 the format `training/build_dataset.py` consumes; `sim/mujoco/run.sh` chains
 collect → build dataset → train.
 
+## HARD REQUIREMENT — wrist_roll must never move
+
+`wrist_roll` is joint index **4** of 6 (`shoulder_pan, shoulder_lift,
+elbow_flex, wrist_flex, wrist_roll, gripper`) — the wrist joint immediately
+**before** the gripper, not the gripper itself.
+
+**Its servo is broken on the physical arm. The joint is taped in place at
+−π/2.** It cannot move, and commanding it only stalls a dead servo and works
+the tape loose. Any policy that learns to roll the wrist is useless on the real
+robot and actively harmful to it.
+
+It is pinned at −π/2 in three independent layers. **Do not remove or "simplify"
+any of them:**
+
+1. `sim/mujoco/env.py` → `WRIST_ROLL_LOCK`, enforced inside `clip_cmd()`, which
+   every command path funnels through. Channel 4 is *overwritten*, not clipped.
+2. `sim/mujoco/robotstudio_so101/so101.xml` → the `wrist_roll` actuator's
+   `ctrlrange` is collapsed to a ±1e-4 rad band around the lock, so even a raw
+   `data.ctrl[:] = …` write that bypasses `SO101Env` cannot roll it. **The band
+   must stay non-zero-width** — with `lo == hi` the compiler reads it as "no
+   range given" and silently leaves `ctrllimited` False, disabling the clamp.
+3. `sim/mujoco/collect.py` → `wrist_roll` is excluded from the IK degrees of
+   freedom (`IK_DOF = (0,1,2,3)`), gets zero DART noise, and every episode is
+   asserted before it is written.
+
+If you touch any of the above, re-run the check in *Verify the lock still holds*
+below before training. If that check fails, **stop** — do not train on the data.
+
 ## Read these first (10 minutes, in this order)
 
 Before running anything, read these files to understand what was built:
@@ -138,3 +166,17 @@ panic-tune below that; report the number.
   recorded episode on hardware first, with `--robot.max_relative_target` set
   small. That step is out of scope for this document — coordinate with
   Pranav's session before touching the real arm.
+
+---
+
+## Verify the lock still holds
+
+Run this from the repo root before training (and after any change to `env.py`,
+`collect.py`, `scene.xml`, or `so101.xml`). It must print `WRIST LOCK OK`:
+
+```bash
+"$L/bin/python" sim/mujoco/check_wrist_lock.py
+```
+
+where `$L` is the conda env used by `run.sh`
+(`/opt/homebrew/Caskroom/miniforge/base/envs/lerobot` by default).

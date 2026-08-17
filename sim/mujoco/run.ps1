@@ -40,6 +40,13 @@ Write-Host "repo root: $repoRoot" -ForegroundColor Cyan
 $SimPython = Join-Path $repoRoot "sim\mujoco_venv\Scripts\python.exe"
 if (-not (Test-Path $SimPython)) { throw "missing sim venv python: $SimPython" }
 
+# ------------------------------------------------------- 0. wrist lock gate
+# wrist_roll's servo is broken on the physical arm and the joint is taped at
+# -pi/2.  Prove it cannot move before spending an hour training on data that
+# might roll it.
+& $SimPython "sim/mujoco/check_wrist_lock.py" "--scene" $Scene
+if ($LASTEXITCODE -ne 0) { throw "wrist lock check failed ($LASTEXITCODE) -- do not train" }
+
 # ---------------------------------------------------------------- 1. collect
 $collectArgs = @(
     "sim/mujoco/collect.py",
@@ -55,6 +62,10 @@ if ($KeepFailures) { $collectArgs += "--keep-failures" }
 Write-Host "`n== 1/3 collect ==" -ForegroundColor Green
 & $SimPython @collectArgs
 if ($LASTEXITCODE -ne 0) { throw "collect.py failed ($LASTEXITCODE)" }
+
+# Re-check against what was actually recorded, not just what the code intends.
+& $SimPython "sim/mujoco/check_wrist_lock.py" "--scene" $Scene "--episodes" $RawDir
+if ($LASTEXITCODE -ne 0) { throw "wrist lock check failed on recorded episodes -- do not train" }
 
 if ($CollectOnly) { Write-Host "`n-CollectOnly: stopping after collection." -ForegroundColor Yellow; exit 0 }
 

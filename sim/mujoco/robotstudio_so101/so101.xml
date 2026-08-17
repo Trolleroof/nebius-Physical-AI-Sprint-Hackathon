@@ -250,7 +250,19 @@
     <position class="sts3215" name="shoulder_lift" joint="shoulder_lift" ctrlrange="-1.74533 1.74533"/>
     <position class="sts3215" name="elbow_flex" joint="elbow_flex" ctrlrange="-1.69 1.69"/>
     <position class="sts3215" name="wrist_flex" joint="wrist_flex" ctrlrange="-1.65806 1.65806"/>
-    <position class="sts3215" name="wrist_roll" joint="wrist_roll" ctrlrange="-2.74385 2.84121"/>
+    <!-- wrist_roll's servo is BROKEN on the physical arm; the joint is taped at
+         -pi/2 and cannot move.  The ctrlrange is collapsed to that single angle
+         so the MODEL clamps it: MuJoCo clamps the actuator to ctrlrange, so even
+         a raw `data.ctrl[:] = ...` write that bypasses SO101Env.clip_cmd
+         entirely cannot roll this joint.  This is deliberately far narrower
+         than the joint's mechanical range on the line below it.  Restore to
+         "-2.74385 2.84121" only if the servo is replaced.
+
+         The band is +/-1e-4 rad (+/-0.006 deg) wide, NOT zero-width, and that
+         is load-bearing: with a zero-width range the compiler reads lo >= hi as
+         "no range given" and leaves ctrllimited FALSE, which silently disables
+         the clamp completely.  Verified: m.actuator_ctrllimited must be True. -->
+    <position class="sts3215" name="wrist_roll" joint="wrist_roll" ctrlrange="-1.5708963 -1.5706963"/>
     <position class="sts3215" name="gripper" joint="gripper" ctrlrange="-0.17453 1.74533"/>
   </actuator>
 </mujoco>

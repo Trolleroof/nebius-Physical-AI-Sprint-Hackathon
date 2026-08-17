@@ -34,6 +34,20 @@ import numpy as np
 ARM_JOINTS = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll")
 GRIPPER_JOINT = "gripper"
 
+# --------------------------------------------------------------------------
+# wrist_roll is BROKEN on the physical arm.  The motor is dead and the joint is
+# taped in place at -pi/2 (claws side-by-side, hand the right way up).  Sending
+# it a goal position on hardware stalls a servo that cannot answer and works the
+# tape loose, so it must never be commanded anywhere but its lock.
+#
+# This is enforced here, in clip_cmd, rather than in each caller: every command
+# path -- the scripted expert in collect.py, a trained policy at eval, replay,
+# preview -- funnels through clip_cmd, so pinning it at this depth means no
+# caller can roll the wrist even by accident.  Index 4 of the 6-vector.
+# --------------------------------------------------------------------------
+WRIST_ROLL_INDEX = 4
+WRIST_ROLL_LOCK = -math.pi / 2.0
+
 TCP_SITE_CANDIDATES = ("gripperframe", "tcp", "grip_site", "attachment_site")
 CUBE_BODY_CANDIDATES = ("cube", "box", "block", "orange_cube")
 TRAY_BODY_CANDIDATES = ("tray", "bin", "basket")
@@ -190,6 +204,8 @@ class SO101Env:
         self.home_qpos = np.asarray(home_qpos, dtype=float).copy()
         if self.home_qpos.shape != (6,):
             raise ValueError("home_qpos must have 6 entries")
+        # A caller-supplied home pose does not get to unpin the dead joint.
+        self.home_qpos[WRIST_ROLL_INDEX] = WRIST_ROLL_LOCK
 
         # ---- timing ------------------------------------------------------
         self.control_hz = float(control_hz)
@@ -275,7 +291,18 @@ class SO101Env:
 
     def clip_cmd(self, cmd: Sequence[float]) -> np.ndarray:
         c = np.asarray(cmd, dtype=float).reshape(6)
-        return np.clip(c, self.ctrl_range[:, 0], self.ctrl_range[:, 1])
+        c = np.clip(c, self.ctrl_range[:, 0], self.ctrl_range[:, 1])
+        # The dead wrist_roll servo is overwritten, not clipped: whatever the
+        # caller asked for, the joint only ever gets its lock.  See the
+        # WRIST_ROLL_LOCK note at the top of this module.
+        #
+        # Stamped AFTER the clip on purpose.  Doing it before means the clip can
+        # drag the lock off again if ctrl_range is ever wrong -- and it can be:
+        # a zero-width ctrlrange in the MJCF compiles to ctrllimited=False, on
+        # which MuJoCo reports the range as [0, 0], which would clip the lock to
+        # 0 rad.  Stamping last keeps this layer independent of the model.
+        c[WRIST_ROLL_INDEX] = WRIST_ROLL_LOCK
+        return c
 
     # ----------------------------------------------------------------- reset
     def reset(
@@ -475,11 +502,11 @@ class SO101Env:
 
 # MODEL_NOTES.md sec.11 `pregrasp` arm pose -- a top-down posture over the middle
 # of the spawn arc, jaws open.  Used as the rest pose and as the IK nullspace bias.
-# wrist_roll is pinned at -pi/2 (claws side-by-side, hand the right way up) --
-# this matches the physical robot and is a hard requirement of the task.
-# The arm angles come from the scene's `pregrasp` keyframe, but qpos[4] is
-# deliberately overridden (that keyframe was baked at +1.58437).
-DEFAULT_HOME_QPOS = (0.0, 0.000381818, 0.473496, 1.17717, -math.pi / 2.0, 0.90)
+# wrist_roll is pinned at WRIST_ROLL_LOCK (-pi/2) -- the joint's motor is broken
+# on the physical arm and it is taped at that angle, so this is the only pose the
+# hand can be in.  The arm angles come from the scene's `pregrasp` keyframe, but
+# qpos[4] is deliberately overridden (that keyframe was baked at +1.58437).
+DEFAULT_HOME_QPOS = (0.0, 0.000381818, 0.473496, 1.17717, WRIST_ROLL_LOCK, 0.90)
 
 
 if __name__ == "__main__":  # tiny smoke test

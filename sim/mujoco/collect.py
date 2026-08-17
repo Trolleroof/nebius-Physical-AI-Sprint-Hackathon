@@ -42,7 +42,7 @@ import mujoco
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from env import SO101Env  # noqa: E402
+from env import WRIST_ROLL_LOCK, SO101Env  # noqa: E402
 
 # ==========================================================================
 # MEASURED SCENE CONSTANTS
@@ -68,7 +68,9 @@ DEFAULT_SCENE = "sim/mujoco/scene.xml"
 #    jaw direction is read back from live FK, so the sign takes care of itself.
 #    (The scene's `pregrasp`/`pickup` keyframes were baked at +1.58 and their
 #    cube placement no longer lines up -- they are never used for alignment.)
-WRIST_ROLL_LOCK = -math.pi / 2.0
+#    The lock ANGLE itself lives in env.py, which also enforces it on every
+#    command that reaches the actuators; it is imported here so the expert's
+#    kinematics and the enforcement can never drift apart.
 IK_DOF = (0, 1, 2, 3)   # indices into the 5 arm joints
 
 # -- gripper (MODEL_NOTES sec.5).  LARGER value = MORE OPEN.

@@ -17,13 +17,20 @@ import URDFLoader, { type URDFRobot } from "urdf-loader";
 
 const URDF_URL = "/robot/so101_new_calib.urdf";
 
+/**
+ * wrist_roll's motor is broken on the physical arm -- the joint is taped at
+ * -pi/2 and never moves. The viewer holds it there and gives it no idle drift,
+ * so what renders is a pose the real robot can actually be in.
+ */
+const WRIST_ROLL_LOCK = -Math.PI / 2;
+
 /** Resting pose, in radians, keyed by URDF joint name. */
 const IDLE_POSE: Record<string, number> = {
   shoulder_pan: 0.0,
   shoulder_lift: -0.55,
   elbow_flex: 1.15,
   wrist_flex: 0.55,
-  wrist_roll: 0.0,
+  wrist_roll: WRIST_ROLL_LOCK,
   gripper: 0.25,
 };
 
@@ -33,7 +40,7 @@ const IDLE_MOTION: Record<string, { amp: number; freq: number; phase: number }> 
   shoulder_lift: { amp: 0.1, freq: 0.3, phase: 1.1 },
   elbow_flex: { amp: 0.13, freq: 0.26, phase: 2.2 },
   wrist_flex: { amp: 0.1, freq: 0.34, phase: 0.6 },
-  wrist_roll: { amp: 0.3, freq: 0.19, phase: 3.0 },
+  wrist_roll: { amp: 0, freq: 0, phase: 0 },
   gripper: { amp: 0.18, freq: 0.42, phase: 1.7 },
 };
 

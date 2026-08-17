@@ -29,9 +29,18 @@ STEPS="${STEPS:-8000}"
 DEVICE="${DEVICE:-mps}"
 TASK="${TASK:-Put the orange cube in the tray.}"
 
+# NOTE: expanded below as ${EXTRA[@]+"${EXTRA[@]}"}, not "${EXTRA[@]}".  macOS
+# ships bash 3.2, where expanding an EMPTY array under `set -u` aborts with
+# "EXTRA[@]: unbound variable" -- so the plain form breaks every default run.
 EXTRA=()
 [ "${WORLD_VIDEO:-0}" = "1" ]   && EXTRA+=(--world-video)
 [ "${KEEP_FAILURES:-0}" = "1" ] && EXTRA+=(--keep-failures)
+
+# wrist_roll's servo is broken on the physical arm and the joint is taped at
+# -pi/2.  This gate proves it cannot move before we spend an hour training on
+# data that might roll it.  `set -e` aborts the run if it fails.
+echo; echo "== 0/3 wrist lock gate =="
+"$PY" sim/mujoco/check_wrist_lock.py --scene "$SCENE"
 
 echo; echo "== 1/3 collect =="
 "$PY" sim/mujoco/collect.py \
@@ -40,7 +49,10 @@ echo; echo "== 1/3 collect =="
   --seed     "$SEED" \
   --scene    "$SCENE" \
   --grasp    "$GRASP" \
-  "${EXTRA[@]}"
+  ${EXTRA[@]+"${EXTRA[@]}"}
+
+# Re-check against what was actually recorded, not just what the code intends.
+"$PY" sim/mujoco/check_wrist_lock.py --scene "$SCENE" --episodes "$RAW_DIR"
 
 if [ "${COLLECT_ONLY:-0}" = "1" ]; then
   echo; echo "COLLECT_ONLY=1: stopping after collection."

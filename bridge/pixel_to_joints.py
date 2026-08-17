@@ -39,6 +39,22 @@ DEFAULT_URDF = os.path.join(HERE, "..", "so101", "urdf", "so101_new_calib.urdf")
 # the kinematic chain to the tool frame.
 ARM_JOINTS = ["shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll"]
 
+# wrist_roll's motor is BROKEN on the physical arm. The joint is taped in place
+# at -pi/2 (claws side-by-side, hand the right way up) and must never be
+# commanded off that angle -- a goal position only stalls a servo that cannot
+# answer and works the tape loose.
+#
+# So it is not an IK degree of freedom. The solver runs over the first four
+# joints and wrist_roll is held at the lock throughout: it is written into the
+# seed, re-pinned after every solver step, and returned at the lock. Position-
+# only IK already leaves the wrist orientation free, so dropping one wrist DOF
+# costs reachability but does not change what the solve is asking for.
+#
+# Kept in DEGREES to match RobotKinematics, which speaks degrees on both sides.
+WRIST_ROLL_INDEX = ARM_JOINTS.index("wrist_roll")
+WRIST_ROLL_LOCK_DEG = -90.0
+IK_DOF = [0, 1, 2, 3]
+
 
 class ArmSolver:
     """FK/IK for the SO-101, with the iteration lerobot's wrapper leaves to you."""
@@ -67,11 +83,17 @@ class ArmSolver:
         target[:3, 3] = np.asarray(target_xyz, dtype=float)
 
         q = np.zeros(len(ARM_JOINTS)) if seed_deg is None else np.array(seed_deg, float)
+        q[WRIST_ROLL_INDEX] = WRIST_ROLL_LOCK_DEG
         err = float("inf")
         for step in range(iters):
-            q = self.kin.inverse_kinematics(
+            proposed = self.kin.inverse_kinematics(
                 q, target, position_weight=1.0, orientation_weight=orientation_weight
             )
+            # Take the solver's step on the four live joints only and re-pin the
+            # dead one, so the next iteration seeds from a pose the arm can hold.
+            q = np.array(q, float)
+            q[IK_DOF] = np.asarray(proposed, float)[IK_DOF]
+            q[WRIST_ROLL_INDEX] = WRIST_ROLL_LOCK_DEG
             err = float(np.linalg.norm(self.fk(q)[:3, 3] - target[:3, 3])) * 1000
             if err < tol_mm:
                 return q, err, step + 1
@@ -136,10 +158,14 @@ def cmd_selftest(args) -> None:
     """
     arm = ArmSolver(args.urdf)
 
-    # Ground truth: poses the arm can actually reach, on a plane.
-    configs = [[-30, -40, 60, -20, 0], [-15, -55, 75, -20, 0], [0, -40, 60, -20, 0],
-               [15, -55, 75, -20, 0], [30, -40, 60, -20, 0], [0, -60, 80, -20, 0],
-               [-20, -50, 70, -20, 0], [20, -50, 70, -20, 0]]
+    # Ground truth: poses the arm can actually reach, on a plane. wrist_roll sits
+    # at its lock in every one -- the taped joint is the only wrist_roll the real
+    # arm has, so a self-test seeded off any other value would be testing a robot
+    # we do not own.
+    _r = WRIST_ROLL_LOCK_DEG
+    configs = [[-30, -40, 60, -20, _r], [-15, -55, 75, -20, _r], [0, -40, 60, -20, _r],
+               [15, -55, 75, -20, _r], [30, -40, 60, -20, _r], [0, -60, 80, -20, _r],
+               [-20, -50, 70, -20, _r], [20, -50, 70, -20, _r]]
     table_pts, heights = [], []
     for cfg in configs:
         xyz = arm.fk(cfg)[:3, 3]
@@ -205,8 +231,9 @@ def cmd_solve(args) -> None:
     q, err, iters = arm.solve_ik([tx, ty, args.z])
     print(f"pixel {tuple(args.pixel)} -> table ({tx:+.4f}, {ty:+.4f}) m")
     print("joints (deg):")
-    for name, value in zip(ARM_JOINTS, q):
-        print(f"  {name:<15} {value:+8.2f}")
+    for i, (name, value) in enumerate(zip(ARM_JOINTS, q)):
+        note = "  (LOCKED -- motor broken, do not command)" if i == WRIST_ROLL_INDEX else ""
+        print(f"  {name:<15} {value:+8.2f}{note}")
     print(f"ik error: {err:.3f} mm in {iters} iterations")
     if err > 5:
         print("WARNING: IK did not converge -- target is likely out of reach.", file=sys.stderr)
