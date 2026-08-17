@@ -1,0 +1,217 @@
+@import "tailwindcss";
+
+/*
+ * Design system for the Continual Embodied Learning dashboard.
+ *
+ * Reference language: dark instrument panel. Near-black ground, hairline
+ * rules, corner brackets, letter-spaced mono labels, one blue accent doing
+ * all the emphasis. Pass/fail are the only other colours that exist, so a
+ * judge's eye goes straight to them.
+ *
+ * The page is deliberately fixed to the viewport: it never scrolls, because
+ * a judge walking up mid-run must see the whole system at once.
+ */
+
+@theme {
+  --color-ground: #08090b;
+  --color-panel: #0e1013;
+  --color-panel-2: #14181d;
+  --color-line: rgba(255, 255, 255, 0.07);
+  --color-line-strong: rgba(255, 255, 255, 0.16);
+  --color-ink: #e6e9ec;
+  --color-muted: #79828d;
+  --color-dim: #454d57;
+  --color-accent: #2e8bff;
+  --color-accent-soft: rgba(46, 139, 255, 0.14);
+  --color-ok: #4fd39b;
+  --color-fail: #ff5c5c;
+  --color-warn: #ffb547;
+
+  --font-display: var(--font-display), system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden; /* one screen, never scrolls */
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- ambient ground -------------------------------------------------------
+ * Stands in for the interactive WebGL background: a slow drifting grid plus
+ * a breathing radial wash. Cheap, never drops frames, no external runtime. */
+
+.ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background-image: linear-gradient(var(--color-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 30%, transparent 75%);
+  opacity: 0.5;
+  animation: drift 44s linear infinite;
+}
+
+.ambient::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 45% at 50% 40%, rgba(46, 139, 255, 0.09), transparent 70%);
+  animation: breathe 11s ease-in-out infinite;
+}
+
+@keyframes drift {
+  to {
+    transform: translate(64px, 64px);
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* --- HUD chrome ----------------------------------------------------------- */
+
+.panel {
+  position: relative;
+  background: linear-gradient(180deg, var(--color-panel) 0%, rgba(8, 9, 11, 0.9) 100%);
+  border: 1px solid var(--color-line);
+  border-radius: 2px;
+}
+
+/* Corner brackets, drawn with two gradients per corner so no extra DOM. */
+.bracket::before,
+.bracket::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: var(--color-line-strong);
+  pointer-events: none;
+}
+.bracket::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+.bracket::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.vrail {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--color-dim);
+  user-select: none;
+}
+
+.glow {
+  text-shadow: 0 0 18px rgba(230, 233, 236, 0.35);
+}
+.glow-accent {
+  text-shadow: 0 0 22px rgba(46, 139, 255, 0.75);
+}
+
+/* Hatched fill used as a section-divider texture, as in the reference. */
+.hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-line-strong) 0 1px,
+    transparent 1px 6px
+  );
+}
+
+/* --- motion --------------------------------------------------------------- */
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(46, 139, 255, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(46, 139, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(46, 139, 255, 0);
+  }
+}
+.pulse {
+  animation: pulse-ring 2s cubic-bezier(0.3, 0, 0.2, 1) infinite;
+}
+
+@keyframes sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+/* Scanline that crosses a panel when it receives new data. */
+.sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(46, 139, 255, 0.12), transparent);
+  animation: sweep 1.6s ease-out;
+  pointer-events: none;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+.blink {
+  animation: blink 1.3s ease-in-out infinite;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
