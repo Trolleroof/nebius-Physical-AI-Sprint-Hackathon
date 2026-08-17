@@ -1,0 +1,555 @@
+{
+  "meta": {
+    "source": "fixture",
+    "run_id": "demo-fixture-001",
+    "description": "Scripted end-to-end run: v0 sim pass -> real fail -> diagnose -> adapt -> v1 -> real pass.",
+    "warning": "ILLUSTRATIVE NUMBERS. The dashboard must show a DEMO DATA badge while replaying this.",
+    "event_count": 49,
+    "duration_s": 150.8
+  },
+  "events": [
+    {
+      "ts": 1755432600.0,
+      "run_id": "demo-fixture-001",
+      "seq": 0,
+      "type": "sim_started",
+      "policy": "v0",
+      "scenario": "cube_to_tray_baseline",
+      "n_episodes": 30
+    },
+    {
+      "ts": 1755432613.0,
+      "run_id": "demo-fixture-001",
+      "seq": 1,
+      "type": "sim_progress",
+      "completed": 10,
+      "total": 30,
+      "successes": 9
+    },
+    {
+      "ts": 1755432626.0,
+      "run_id": "demo-fixture-001",
+      "seq": 2,
+      "type": "sim_progress",
+      "completed": 20,
+      "total": 30,
+      "successes": 18
+    },
+    {
+      "ts": 1755432639.0,
+      "run_id": "demo-fixture-001",
+      "seq": 3,
+      "type": "sim_progress",
+      "completed": 30,
+      "total": 30,
+      "successes": 27
+    },
+    {
+      "ts": 1755432641.0,
+      "run_id": "demo-fixture-001",
+      "seq": 4,
+      "type": "sim_passed",
+      "successes": 27,
+      "total": 30,
+      "threshold": 0.8
+    },
+    {
+      "ts": 1755432644.0,
+      "run_id": "demo-fixture-001",
+      "seq": 5,
+      "type": "policy_loaded",
+      "policy": "v0",
+      "checkpoint": "act_v0_step12000.safetensors"
+    },
+    {
+      "ts": 1755432650.0,
+      "run_id": "demo-fixture-001",
+      "seq": 6,
+      "type": "deploy_started",
+      "policy": "v0",
+      "condition": "cube +4cm right, low-friction surface"
+    },
+    {
+      "ts": 1755432661.0,
+      "run_id": "demo-fixture-001",
+      "seq": 7,
+      "type": "video_ready",
+      "url": "/artifacts/videos/v0_real_failure.mp4",
+      "duration_s": 8.4,
+      "poster_url": "/artifacts/videos/v0_real_failure.jpg"
+    },
+    {
+      "ts": 1755432661.5,
+      "run_id": "demo-fixture-001",
+      "seq": 8,
+      "type": "real_failed",
+      "policy": "v0",
+      "note": "Cube left the gripper mid-transport."
+    },
+    {
+      "ts": 1755432663.5,
+      "run_id": "demo-fixture-001",
+      "seq": 9,
+      "type": "critic_started",
+      "video_url": "/artifacts/videos/v0_real_failure.mp4"
+    },
+    {
+      "ts": 1755432667.7,
+      "run_id": "demo-fixture-001",
+      "seq": 10,
+      "type": "diagnosis_ready",
+      "diagnosis": {
+        "success": false,
+        "stage": "transport",
+        "failure": "object_slip",
+        "confidence": 0.91,
+        "estimated_causes": [
+          {
+            "cause": "low_friction",
+            "confidence": 0.72
+          },
+          {
+            "cause": "grasp_offset",
+            "confidence": 0.21
+          },
+          {
+            "cause": "other",
+            "confidence": 0.07
+          }
+        ],
+        "recommended_sim_changes": [
+          {
+            "parameter": "object_friction",
+            "min": 0.2,
+            "max": 0.5,
+            "clamped": false
+          },
+          {
+            "parameter": "grasp_pose_noise",
+            "min": 0.0,
+            "max": 8.0,
+            "clamped": false
+          },
+          {
+            "parameter": "object_mass",
+            "min": 0.5,
+            "max": 2.4,
+            "clamped": false
+          }
+        ],
+        "summary": "The gripper closed slightly off-centre and the cube rotated free during transport."
+      },
+      "latency_ms": 4200
+    },
+    {
+      "ts": 1755432668.8,
+      "run_id": "demo-fixture-001",
+      "seq": 11,
+      "type": "curriculum_ready",
+      "curriculum_id": "curr-001",
+      "changes": [
+        {
+          "parameter": "object_friction",
+          "min": 0.2,
+          "max": 0.5,
+          "clamped": false
+        },
+        {
+          "parameter": "grasp_pose_noise",
+          "min": 0.0,
+          "max": 8.0,
+          "clamped": false
+        },
+        {
+          "parameter": "object_mass",
+          "min": 0.8,
+          "max": 1.3,
+          "clamped": true
+        }
+      ],
+      "n_scenarios": 30,
+      "baseline": {
+        "object_friction": 0.6,
+        "grasp_pose_noise": 0.0,
+        "object_mass": 1.0
+      }
+    },
+    {
+      "ts": 1755432670.3,
+      "run_id": "demo-fixture-001",
+      "seq": 12,
+      "type": "batch_started",
+      "curriculum_id": "curr-001",
+      "n_scenarios": 30
+    },
+    {
+      "ts": 1755432672.3,
+      "run_id": "demo-fixture-001",
+      "seq": 13,
+      "type": "batch_progress",
+      "index": 0,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/00.jpg"
+    },
+    {
+      "ts": 1755432674.3,
+      "run_id": "demo-fixture-001",
+      "seq": 14,
+      "type": "batch_progress",
+      "index": 1,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/01.jpg"
+    },
+    {
+      "ts": 1755432676.3,
+      "run_id": "demo-fixture-001",
+      "seq": 15,
+      "type": "batch_progress",
+      "index": 2,
+      "total": 30,
+      "success": false,
+      "thumbnail_url": "/artifacts/demo/batch/02.jpg"
+    },
+    {
+      "ts": 1755432678.3,
+      "run_id": "demo-fixture-001",
+      "seq": 16,
+      "type": "batch_progress",
+      "index": 3,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/03.jpg"
+    },
+    {
+      "ts": 1755432680.3,
+      "run_id": "demo-fixture-001",
+      "seq": 17,
+      "type": "batch_progress",
+      "index": 4,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/04.jpg"
+    },
+    {
+      "ts": 1755432682.3,
+      "run_id": "demo-fixture-001",
+      "seq": 18,
+      "type": "batch_progress",
+      "index": 5,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/05.jpg"
+    },
+    {
+      "ts": 1755432684.3,
+      "run_id": "demo-fixture-001",
+      "seq": 19,
+      "type": "batch_progress",
+      "index": 6,
+      "total": 30,
+      "success": false,
+      "thumbnail_url": "/artifacts/demo/batch/06.jpg"
+    },
+    {
+      "ts": 1755432686.3,
+      "run_id": "demo-fixture-001",
+      "seq": 20,
+      "type": "batch_progress",
+      "index": 7,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/07.jpg"
+    },
+    {
+      "ts": 1755432688.3,
+      "run_id": "demo-fixture-001",
+      "seq": 21,
+      "type": "batch_progress",
+      "index": 8,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/08.jpg"
+    },
+    {
+      "ts": 1755432690.3,
+      "run_id": "demo-fixture-001",
+      "seq": 22,
+      "type": "batch_progress",
+      "index": 9,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/09.jpg"
+    },
+    {
+      "ts": 1755432692.3,
+      "run_id": "demo-fixture-001",
+      "seq": 23,
+      "type": "batch_progress",
+      "index": 10,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/10.jpg"
+    },
+    {
+      "ts": 1755432694.3,
+      "run_id": "demo-fixture-001",
+      "seq": 24,
+      "type": "batch_progress",
+      "index": 11,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/11.jpg"
+    },
+    {
+      "ts": 1755432696.3,
+      "run_id": "demo-fixture-001",
+      "seq": 25,
+      "type": "batch_progress",
+      "index": 12,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/12.jpg"
+    },
+    {
+      "ts": 1755432698.3,
+      "run_id": "demo-fixture-001",
+      "seq": 26,
+      "type": "batch_progress",
+      "index": 13,
+      "total": 30,
+      "success": false,
+      "thumbnail_url": "/artifacts/demo/batch/13.jpg"
+    },
+    {
+      "ts": 1755432700.3,
+      "run_id": "demo-fixture-001",
+      "seq": 27,
+      "type": "batch_progress",
+      "index": 14,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/14.jpg"
+    },
+    {
+      "ts": 1755432702.3,
+      "run_id": "demo-fixture-001",
+      "seq": 28,
+      "type": "batch_progress",
+      "index": 15,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/15.jpg"
+    },
+    {
+      "ts": 1755432704.3,
+      "run_id": "demo-fixture-001",
+      "seq": 29,
+      "type": "batch_progress",
+      "index": 16,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/16.jpg"
+    },
+    {
+      "ts": 1755432706.3,
+      "run_id": "demo-fixture-001",
+      "seq": 30,
+      "type": "batch_progress",
+      "index": 17,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/17.jpg"
+    },
+    {
+      "ts": 1755432708.3,
+      "run_id": "demo-fixture-001",
+      "seq": 31,
+      "type": "batch_progress",
+      "index": 18,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/18.jpg"
+    },
+    {
+      "ts": 1755432710.3,
+      "run_id": "demo-fixture-001",
+      "seq": 32,
+      "type": "batch_progress",
+      "index": 19,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/19.jpg"
+    },
+    {
+      "ts": 1755432712.3,
+      "run_id": "demo-fixture-001",
+      "seq": 33,
+      "type": "batch_progress",
+      "index": 20,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/20.jpg"
+    },
+    {
+      "ts": 1755432714.3,
+      "run_id": "demo-fixture-001",
+      "seq": 34,
+      "type": "batch_progress",
+      "index": 21,
+      "total": 30,
+      "success": false,
+      "thumbnail_url": "/artifacts/demo/batch/21.jpg"
+    },
+    {
+      "ts": 1755432716.3,
+      "run_id": "demo-fixture-001",
+      "seq": 35,
+      "type": "batch_progress",
+      "index": 22,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/22.jpg"
+    },
+    {
+      "ts": 1755432718.3,
+      "run_id": "demo-fixture-001",
+      "seq": 36,
+      "type": "batch_progress",
+      "index": 23,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/23.jpg"
+    },
+    {
+      "ts": 1755432720.3,
+      "run_id": "demo-fixture-001",
+      "seq": 37,
+      "type": "batch_progress",
+      "index": 24,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/24.jpg"
+    },
+    {
+      "ts": 1755432722.3,
+      "run_id": "demo-fixture-001",
+      "seq": 38,
+      "type": "batch_progress",
+      "index": 25,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/25.jpg"
+    },
+    {
+      "ts": 1755432724.3,
+      "run_id": "demo-fixture-001",
+      "seq": 39,
+      "type": "batch_progress",
+      "index": 26,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/26.jpg"
+    },
+    {
+      "ts": 1755432726.3,
+      "run_id": "demo-fixture-001",
+      "seq": 40,
+      "type": "batch_progress",
+      "index": 27,
+      "total": 30,
+      "success": false,
+      "thumbnail_url": "/artifacts/demo/batch/27.jpg"
+    },
+    {
+      "ts": 1755432728.3,
+      "run_id": "demo-fixture-001",
+      "seq": 41,
+      "type": "batch_progress",
+      "index": 28,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/28.jpg"
+    },
+    {
+      "ts": 1755432730.3,
+      "run_id": "demo-fixture-001",
+      "seq": 42,
+      "type": "batch_progress",
+      "index": 29,
+      "total": 30,
+      "success": true,
+      "thumbnail_url": "/artifacts/demo/batch/29.jpg"
+    },
+    {
+      "ts": 1755432731.3,
+      "run_id": "demo-fixture-001",
+      "seq": 43,
+      "type": "batch_complete",
+      "successes": 25,
+      "total": 30
+    },
+    {
+      "ts": 1755432735.3,
+      "run_id": "demo-fixture-001",
+      "seq": 44,
+      "type": "policy_loaded",
+      "policy": "v1",
+      "checkpoint": "act_v1_step12000.safetensors"
+    },
+    {
+      "ts": 1755432736.3,
+      "run_id": "demo-fixture-001",
+      "seq": 45,
+      "type": "metrics_ready",
+      "metrics": {
+        "rows": [
+          {
+            "label": "Baseline sim",
+            "v0": "90%",
+            "v1": "93%"
+          },
+          {
+            "label": "Hard held-out set",
+            "v0": "42%",
+            "v1": "81%"
+          },
+          {
+            "label": "Real condition",
+            "v0": "FAIL",
+            "v1": "PASS"
+          }
+        ],
+        "held_out_scenarios": 30,
+        "initial_demos": 30,
+        "corrective_demos": 20
+      }
+    },
+    {
+      "ts": 1755432739.3,
+      "run_id": "demo-fixture-001",
+      "seq": 46,
+      "type": "redeploy_started",
+      "policy": "v1",
+      "condition": "cube +4cm right, low-friction surface"
+    },
+    {
+      "ts": 1755432750.3,
+      "run_id": "demo-fixture-001",
+      "seq": 47,
+      "type": "video_ready",
+      "url": "/artifacts/videos/v1_real_success.mp4",
+      "duration_s": 9.1,
+      "poster_url": "/artifacts/videos/v1_real_success.jpg"
+    },
+    {
+      "ts": 1755432750.8,
+      "run_id": "demo-fixture-001",
+      "seq": 48,
+      "type": "real_success",
+      "policy": "v1",
+      "note": "Cube placed in tray under the same condition."
+    }
+  ]
+}
