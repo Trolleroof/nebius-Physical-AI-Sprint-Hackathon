@@ -16,6 +16,9 @@ training/outputs/
 *.safetensors
 annotated*.jpg
 test_scene.jpg
+# Camera frames captured by er2_client.py -- regenerate with --annotate, and
+# keep the megabytes of booth photos out of the history.
+er2/*.jpg
 # Local Antioch state and environment caches
 .antioch/
 .uv-cache/
