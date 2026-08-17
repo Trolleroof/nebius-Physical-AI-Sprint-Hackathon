@@ -26,6 +26,72 @@ except ImportError:  # pragma: no cover - only meaningful off Windows
 if not hasattr(os, "fchmod"):
     os.fchmod = lambda fd, mode: None
 
+# antioch.core.locking.atomic_write_bytes() opens the parent DIRECTORY and
+# fsyncs it — a POSIX durability idiom Windows refuses (os.open on a
+# directory raises PermissionError), which broke `antioch auth login` with
+# "Credential store ... could not be written safely". Substitute a NUL-device
+# descriptor for directory opens and skip fsync on exactly those descriptors,
+# so regular-file durability is untouched.
+if os.name == "nt":
+    _real_os_open = os.open
+    _real_fsync = os.fsync
+    _real_close = os.close
+    _dir_fds: set = set()
+
+    def _os_open(path, flags, mode=0o777, *, dir_fd=None):
+        try:
+            return _real_os_open(path, flags, mode, dir_fd=dir_fd)
+        except OSError:
+            try:
+                is_dir = os.path.isdir(path)
+            except (TypeError, OSError):
+                is_dir = False
+            if is_dir:
+                fd = _real_os_open(os.devnull, os.O_RDWR)
+                _dir_fds.add(fd)
+                return fd
+            raise
+
+    def _fsync(fd):
+        if fd in _dir_fds:
+            return
+        _real_fsync(fd)
+
+    def _close(fd):
+        _dir_fds.discard(fd)
+        _real_close(fd)
+
+    os.open = _os_open
+    os.fsync = _fsync
+    os.close = _close
+
+    # antioch.cli.session rejects any credential store whose st_mode has
+    # group/other bits (`st_mode & 0o077`). Windows cannot represent POSIX
+    # owner-only modes — chmod maps everything onto the read-only flag and
+    # stat reports 0o666 — so the check fails on every file that can exist
+    # here. Mask group/other bits out of pathlib stat results instead;
+    # actual secrecy comes from %USERPROFILE% NTFS ACLs, not POSIX bits.
+    import pathlib
+
+    _real_path_stat = pathlib.Path.stat
+
+    def _path_stat(self, *, follow_symlinks=True):
+        result = _real_path_stat(self, follow_symlinks=follow_symlinks)
+        if not result.st_mode & 0o077:
+            return result
+        extra = {}
+        for name in (
+            "st_atime", "st_mtime", "st_ctime",
+            "st_atime_ns", "st_mtime_ns", "st_ctime_ns",
+            "st_file_attributes", "st_reparse_tag",
+        ):
+            if hasattr(result, name):
+                extra[name] = getattr(result, name)
+        values = (result.st_mode & ~0o077,) + tuple(result)[1:10]
+        return os.stat_result(values, extra)
+
+    pathlib.Path.stat = _path_stat
+
 LOCK_SH = 1
 LOCK_EX = 2
 LOCK_NB = 4
