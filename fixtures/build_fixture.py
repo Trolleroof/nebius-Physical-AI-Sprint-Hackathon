@@ -59,7 +59,7 @@ RUN_ID = "demo-fixture-001"
 T0 = 1_755_432_600.0  # fixed epoch; keeps regenerated fixtures diff-clean
 
 #: The controlled out-of-distribution condition from plan section 8.
-CONDITION = "cube +4cm right, low-friction surface"
+CONDITION = "block +6cm right of its trained position"
 
 #: Which of the 30 targeted scenarios fail. Fixed, not random, so the batch
 #: grid renders identically on every replay.
@@ -80,7 +80,7 @@ def emit(event, gap: float = 0.0):
 
 # --- SIMULATE: ACT v0 trains and runs in Antioch -----------------------------
 
-emit(SimStarted(run_id=RUN_ID, policy="v0", scenario="cube_to_tray_baseline", n_episodes=30))
+emit(SimStarted(run_id=RUN_ID, policy="v0", scenario="so101_pick_place", n_episodes=30))
 for completed, successes in ((10, 9), (20, 18), (30, 27)):
     emit(SimProgress(run_id=RUN_ID, completed=completed, total=30, successes=successes), gap=13.0)
 
@@ -101,7 +101,7 @@ emit(
     ),
     gap=11.0,
 )
-emit(RealFailed(run_id=RUN_ID, policy="v0", note="Cube left the gripper mid-transport."), gap=0.5)
+emit(RealFailed(run_id=RUN_ID, policy="v0", note="Gripper closed beside the block."), gap=0.5)
 
 # --- DIAGNOSE: the critic reads the video ------------------------------------
 
@@ -109,23 +109,23 @@ emit(CriticStarted(run_id=RUN_ID, video_url="/artifacts/videos/v0_real_failure.m
 
 diagnosis = FailureDiagnosis(
     success=False,
-    stage=Stage.TRANSPORT,
-    failure=FailureMode.OBJECT_SLIP,
-    confidence=0.91,
+    stage=Stage.GRASP,
+    failure=FailureMode.FAILED_GRASP,
+    confidence=0.88,
     estimated_causes=[
-        EstimatedCause(cause="low_friction", confidence=0.72),
-        EstimatedCause(cause="grasp_offset", confidence=0.21),
+        EstimatedCause(cause="lateral_offset", confidence=0.69),
+        EstimatedCause(cause="reach_error", confidence=0.24),
         EstimatedCause(cause="other", confidence=0.07),
     ],
     recommended_sim_changes=[
-        SimChange(parameter=SimParameter.OBJECT_FRICTION, min=0.20, max=0.50),
-        SimChange(parameter=SimParameter.GRASP_POSE_NOISE, min=0.0, max=8.0),
-        # Deliberately over-wide: the critic asks for 0.5x-2.4x mass, which is
-        # outside PARAMETER_BOUNDS. The mapper pulls it in, and the dashboard
-        # shows the guardrail firing. This case must survive into the demo.
-        SimChange(parameter=SimParameter.OBJECT_MASS, min=0.5, max=2.4),
+        SimChange(parameter=SimParameter.PICK_Y, min=-0.18, max=0.10),
+        # Deliberately near-full-range: the critic asks to vary pick_x across
+        # almost its entire legal span, which says nothing about where the
+        # policy is weak. The mapper rejects it for the targeted rule and
+        # flags the override, so the guardrail is visible on screen.
+        SimChange(parameter=SimParameter.PICK_X, min=0.15, max=0.45),
     ],
-    summary="The gripper closed slightly off-centre and the cube rotated free during transport.",
+    summary="The gripper closed beside the block rather than around it, catching only its near edge.",
 )
 emit(DiagnosisReady(run_id=RUN_ID, diagnosis=diagnosis, latency_ms=4200), gap=4.2)
 
@@ -136,11 +136,10 @@ emit(
         run_id=RUN_ID,
         curriculum_id="curr-001",
         n_scenarios=30,
-        baseline={"object_friction": 0.60, "grasp_pose_noise": 0.0, "object_mass": 1.0},
+        baseline={"pick_y": -0.06, "pick_x": 0.32},
         changes=[
-            SimChange(parameter=SimParameter.OBJECT_FRICTION, min=0.20, max=0.50),
-            SimChange(parameter=SimParameter.GRASP_POSE_NOISE, min=0.0, max=8.0),
-            SimChange(parameter=SimParameter.OBJECT_MASS, min=0.8, max=1.3, clamped=True),
+            SimChange(parameter=SimParameter.PICK_Y, min=-0.18, max=0.10),
+            SimChange(parameter=SimParameter.PICK_X, min=0.24, max=0.40, clamped=True),
         ],
     ),
     gap=1.1,
@@ -192,7 +191,7 @@ emit(
     ),
     gap=11.0,
 )
-emit(RealSuccess(run_id=RUN_ID, policy="v1", note="Cube placed in tray under the same condition."), gap=0.5)
+emit(RealSuccess(run_id=RUN_ID, policy="v1", note="Block placed in tray under the same condition."), gap=0.5)
 
 
 payload = {

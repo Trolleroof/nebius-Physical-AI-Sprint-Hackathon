@@ -42,9 +42,14 @@ Rules:
   number is more useful to us than a confident guess.
 - `estimated_causes` are physical hypotheses (e.g. low_friction,
   grasp_offset), each with its own confidence.
-- `recommended_sim_changes` may only name these parameters:
-  object_friction, object_mass, object_x, object_y, object_yaw,
-  grasp_pose_noise, camera_pose_noise, action_delay, joint_target_noise
+- `recommended_sim_changes` may only name these parameters, which are the
+  keyword arguments of the simulated task:
+  pick_x, pick_y (block position, metres)
+  place_x, place_y (tray position, metres)
+  travel_z (height the gripper traverses at, metres)
+  If the physical cause you suspect has no parameter here, say so in
+  `estimated_causes` and leave `recommended_sim_changes` empty rather than
+  naming a parameter that does not exist.
 - `summary` is one plain sentence a non-expert can read.
 
 Return JSON matching the FailureDiagnosis schema and nothing else."""
@@ -69,21 +74,22 @@ class MockCritic:
         return parse_diagnosis(
             {
                 "success": False,
-                "stage": "transport",
-                "failure": "object_slip",
-                "confidence": 0.91,
+                "stage": "grasp",
+                "failure": "failed_grasp",
+                "confidence": 0.88,
                 "estimated_causes": [
-                    {"cause": "low_friction", "confidence": 0.72},
-                    {"cause": "grasp_offset", "confidence": 0.21},
+                    {"cause": "lateral_offset", "confidence": 0.69},
+                    {"cause": "reach_error", "confidence": 0.24},
                 ],
                 "recommended_sim_changes": [
-                    {"parameter": "object_friction", "min": 0.20, "max": 0.50},
-                    {"parameter": "grasp_pose_noise", "min": 0, "max": 8},
-                    {"parameter": "object_mass", "min": 0.5, "max": 2.4},
+                    {"parameter": "pick_y", "min": -0.18, "max": 0.10},
+                    # Deliberately near-full-range: exercises the mapper's
+                    # rejection of uninformative recommendations on every run.
+                    {"parameter": "pick_x", "min": 0.15, "max": 0.45},
                 ],
                 "summary": (
-                    "The gripper closed slightly off-centre and the cube "
-                    "rotated free during transport."
+                    "The gripper closed beside the block rather than around "
+                    "it, catching only its near edge."
                 ),
             }
         )

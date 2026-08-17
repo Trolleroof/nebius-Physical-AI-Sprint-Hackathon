@@ -26,77 +26,76 @@ from schemas import (
     SimParameter,
 )
 
-#: Nominal scenario values — what the baseline training distribution used.
-#: The dashboard renders these as the "before" side of `0.60 -> 0.20-0.50`.
-#: Replace with the real Antioch scenario defaults once they are known.
+#: Nominal scenario values — the defaults on ``so101_pick_place``. The
+#: dashboard renders these as the "before" side of `0.32 -> 0.24-0.40`.
 BASELINE_SCENARIO: dict[SimParameter, float] = {
-    SimParameter.OBJECT_FRICTION: 0.60,
-    SimParameter.OBJECT_MASS: 1.00,
-    SimParameter.OBJECT_X: 0.00,
-    SimParameter.OBJECT_Y: 0.00,
-    SimParameter.OBJECT_YAW: 0.00,
-    SimParameter.GRASP_POSE_NOISE: 0.00,
-    SimParameter.CAMERA_POSE_NOISE: 0.00,
-    SimParameter.ACTION_DELAY: 0.00,
-    SimParameter.JOINT_TARGET_NOISE: 0.00,
+    SimParameter.PICK_X: 0.32,
+    SimParameter.PICK_Y: -0.06,
+    SimParameter.PLACE_X: 0.30,
+    SimParameter.PLACE_Y: 0.16,
+    SimParameter.TRAVEL_Z: 0.14,
 }
 
-#: Fallback curriculum per failure mode, from plan section 10's example rules.
-#: Used when the critic recommends nothing, and merged with its suggestions
-#: when it does. Ranges are intentionally modest: the point is targeted
-#: coverage of the observed weakness, not blanket randomisation.
+#: Fallback curriculum per failure mode, in the spirit of plan section 10 but
+#: restricted to knobs the scenario actually has. Used when the critic
+#: recommends nothing, and merged with its suggestions when it does. Ranges
+#: are deliberately modest: targeted coverage of the observed weakness, not
+#: blanket randomisation.
+#:
+#: Several failure modes map to nothing, because the scenario exposes only
+#: geometry — there is no friction, mass, yaw or noise to vary. Those return
+#: an empty curriculum, and the dashboard says so rather than inventing work.
+#: Extending coverage means adding a typed parameter to the scenario first.
 RULES: dict[FailureMode, list[tuple[SimParameter, float, float]]] = {
-    FailureMode.OBJECT_SLIP: [
-        (SimParameter.OBJECT_FRICTION, 0.20, 0.50),
-        (SimParameter.OBJECT_MASS, 0.80, 1.30),
-        (SimParameter.GRASP_POSE_NOISE, 0.0, 8.0),
-    ],
+    # Grasp went wrong: give the policy a wider spread of block positions.
     FailureMode.FAILED_GRASP: [
-        (SimParameter.OBJECT_YAW, -20.0, 20.0),
-        (SimParameter.OBJECT_X, -0.04, 0.04),
-        (SimParameter.GRASP_POSE_NOISE, 0.0, 10.0),
+        (SimParameter.PICK_X, 0.24, 0.40),
+        (SimParameter.PICK_Y, -0.18, 0.10),
     ],
     FailureMode.MISSED_OBJECT: [
-        (SimParameter.OBJECT_X, -0.06, 0.06),
-        (SimParameter.OBJECT_Y, -0.06, 0.06),
+        (SimParameter.PICK_X, 0.22, 0.42),
+        (SimParameter.PICK_Y, -0.22, 0.14),
     ],
     FailureMode.BAD_ALIGNMENT: [
-        (SimParameter.CAMERA_POSE_NOISE, 0.0, 6.0),
-        (SimParameter.OBJECT_YAW, -25.0, 25.0),
-    ],
-    FailureMode.PREMATURE_RELEASE: [
-        (SimParameter.ACTION_DELAY, 0.0, 60.0),
-        (SimParameter.GRASP_POSE_NOISE, 0.0, 6.0),
-    ],
-    FailureMode.COLLISION: [
-        (SimParameter.ACTION_DELAY, 0.0, 40.0),
-        (SimParameter.JOINT_TARGET_NOISE, 0.0, 2.0),
+        (SimParameter.PICK_X, 0.26, 0.38),
+        (SimParameter.PICK_Y, -0.16, 0.08),
     ],
     FailureMode.UNREACHABLE_POSE: [
-        (SimParameter.OBJECT_X, -0.05, 0.05),
-        (SimParameter.OBJECT_Y, -0.05, 0.05),
+        (SimParameter.PICK_X, 0.18, 0.44),
+        (SimParameter.PICK_Y, -0.30, 0.30),
     ],
+    # Placement went wrong: vary where the tray is, not where the block is.
     FailureMode.PLACEMENT_ERROR: [
-        (SimParameter.OBJECT_X, -0.05, 0.05),
-        (SimParameter.JOINT_TARGET_NOISE, 0.0, 2.5),
+        (SimParameter.PLACE_X, 0.24, 0.38),
+        (SimParameter.PLACE_Y, 0.08, 0.26),
     ],
+    # Hit something in transit: vary the traverse height.
+    FailureMode.COLLISION: [
+        (SimParameter.TRAVEL_Z, 0.10, 0.22),
+    ],
+}
+
+#: Failure modes the scenario cannot currently reproduce, and what it would
+#: take to cover them. Surfaced to the operator instead of silently producing
+#: an empty curriculum — an honest "we can't simulate this yet" is a better
+#: answer to a judge than a curriculum that does not address the diagnosis.
+UNMAPPABLE: dict[FailureMode, str] = {
+    FailureMode.OBJECT_SLIP: "needs a friction or mass parameter on so101_pick_place",
+    FailureMode.PREMATURE_RELEASE: "needs a grip-force or actuation-timing parameter",
 }
 
 #: Causes the critic names in prose, mapped to the knob they implicate. Lets a
 #: confident cause pull in a parameter the failure-mode rule alone would miss.
 CAUSE_HINTS: dict[str, SimParameter] = {
-    "low_friction": SimParameter.OBJECT_FRICTION,
-    "high_friction": SimParameter.OBJECT_FRICTION,
-    "friction_mismatch": SimParameter.OBJECT_FRICTION,
-    "heavy_object": SimParameter.OBJECT_MASS,
-    "grasp_offset": SimParameter.GRASP_POSE_NOISE,
-    "grasp_position": SimParameter.GRASP_POSE_NOISE,
-    "camera_offset": SimParameter.CAMERA_POSE_NOISE,
-    "calibration_error": SimParameter.CAMERA_POSE_NOISE,
-    "object_pose": SimParameter.OBJECT_X,
-    "object_rotation": SimParameter.OBJECT_YAW,
-    "actuator_lag": SimParameter.ACTION_DELAY,
-    "timing": SimParameter.ACTION_DELAY,
+    "object_pose": SimParameter.PICK_X,
+    "block_position": SimParameter.PICK_X,
+    "reach_error": SimParameter.PICK_X,
+    "lateral_offset": SimParameter.PICK_Y,
+    "depth_error": SimParameter.PICK_Y,
+    "tray_position": SimParameter.PLACE_X,
+    "placement_offset": SimParameter.PLACE_Y,
+    "traverse_height": SimParameter.TRAVEL_Z,
+    "clearance": SimParameter.TRAVEL_Z,
 }
 
 #: A cause below this confidence does not get to add a parameter of its own.
@@ -179,6 +178,20 @@ def map_diagnosis(diagnosis: FailureDiagnosis) -> list[SimChange]:
             change.clamped = True
         changes.append(change)
     return changes
+
+
+def unmappable_reason(diagnosis: FailureDiagnosis) -> str | None:
+    """Why this diagnosis produced no curriculum, if it produced none.
+
+    Returning a reason is the point: a failure the simulator cannot reproduce
+    is a real finding about the scenario, and hiding it behind an empty panel
+    would make the loop look broken rather than honest.
+    """
+    if diagnosis.success or map_diagnosis(diagnosis):
+        return None
+    return UNMAPPABLE.get(
+        diagnosis.failure, "no parameter on so101_pick_place covers this failure mode"
+    )
 
 
 def sample_curriculum(changes: list[SimChange], n: int, seed: int = 0) -> list[dict[str, float]]:
