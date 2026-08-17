@@ -23,7 +23,13 @@ function useClock() {
   return now;
 }
 
-export function Header({ state, isFixture }: { state: DashboardState; isFixture: boolean }) {
+export function Header({
+  state,
+  source,
+}: {
+  state: DashboardState;
+  source: "probing" | "live" | "fixture";
+}) {
   return (
     <header className="flex shrink-0 items-center gap-4 border-b border-[var(--color-line)] px-4 py-2.5">
       <div className="flex items-baseline gap-3">
@@ -42,9 +48,18 @@ export function Header({ state, isFixture }: { state: DashboardState; isFixture:
 
       <div className="hatch h-2 w-16 opacity-25" />
 
-      {isFixture && (
+      {/* Never let a replay be mistaken for a live run, or the other way
+          round. This badge is the one piece of chrome that must always be
+          truthful (plan section 20). */}
+      {source === "fixture" && (
         <span className="rounded-[1px] border border-[var(--color-warn)]/40 bg-[var(--color-warn)]/10 px-2 py-0.5 font-mono text-[9px] tracking-[0.16em] text-[var(--color-warn)] uppercase">
           demo data
+        </span>
+      )}
+      {source === "live" && (
+        <span className="flex items-center gap-1.5 rounded-[1px] border border-[var(--color-ok)]/40 bg-[var(--color-ok)]/10 px-2 py-0.5 font-mono text-[9px] tracking-[0.16em] text-[var(--color-ok)] uppercase">
+          <span className="size-1 rounded-full bg-[var(--color-ok)] pulse" />
+          live
         </span>
       )}
 
