@@ -61,6 +61,7 @@ class Orchestrator:
         self.batch_results: list[bool] = []
         self.last_video: str | None = None
         self._lock = asyncio.Lock()
+        self._tasks: set[asyncio.Task] = set()
 
     # --- helpers ------------------------------------------------------------
 
@@ -69,6 +70,32 @@ class Orchestrator:
             self.run_id = uuid.uuid4().hex[:8]
             bus.status.run_id = self.run_id
         return self.run_id
+
+    def launch(self, coro) -> None:
+        """Run a phase in the background, keeping a handle on it.
+
+        FastAPI's BackgroundTasks would do the same job but hands nothing
+        back, so a phase started that way cannot be stopped — which is what
+        ``cancel_running`` needs.
+        """
+        task = asyncio.create_task(coro)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+
+    async def cancel_running(self) -> None:
+        """Stop any phase still in flight, and wait until it is really stopped.
+
+        RESET DEMO used to wipe the history out from under a run that was
+        still going. The old run carried on publishing into the new one, so
+        two timelines interleaved on the same screen — visible as batch
+        results arriving while the rail said SIMULATE.
+        """
+        pending = [task for task in self._tasks if not task.done()]
+        for task in pending:
+            task.cancel()
+        if pending:
+            await asyncio.gather(*pending, return_exceptions=True)
+        self._tasks.clear()
 
     def reset(self) -> None:
         self.run_id = ""

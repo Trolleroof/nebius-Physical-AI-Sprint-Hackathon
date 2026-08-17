@@ -16,7 +16,7 @@ from typing import AsyncIterator
 
 from pathlib import Path
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -113,8 +113,8 @@ class SimRequest(BaseModel):
 
 
 @app.post("/api/sim/run", response_model=Ack)
-async def sim_run(body: SimRequest, tasks: BackgroundTasks) -> Ack:
-    tasks.add_task(orchestrator.run_sim, body.policy, body.n_episodes)
+async def sim_run(body: SimRequest) -> Ack:
+    orchestrator.launch(orchestrator.run_sim(body.policy, body.n_episodes))
     return Ack(detail=f"simulating {body.n_episodes} episodes with {body.policy}")
 
 
@@ -124,8 +124,8 @@ class DeployRequest(BaseModel):
 
 
 @app.post("/api/deploy", response_model=Ack)
-async def deploy(body: DeployRequest, tasks: BackgroundTasks) -> Ack:
-    tasks.add_task(orchestrator.deploy, body.policy, body.redeploy)
+async def deploy(body: DeployRequest) -> Ack:
+    orchestrator.launch(orchestrator.deploy(body.policy, body.redeploy))
     return Ack(detail=f"deploying {body.policy} to SO-101")
 
 
@@ -134,8 +134,8 @@ class AnalyzeRequest(BaseModel):
 
 
 @app.post("/api/critic/analyze", response_model=Ack)
-async def analyze(body: AnalyzeRequest, tasks: BackgroundTasks) -> Ack:
-    tasks.add_task(orchestrator.analyze, body.video_path)
+async def analyze(body: AnalyzeRequest) -> Ack:
+    orchestrator.launch(orchestrator.analyze(body.video_path))
     return Ack(detail="critic analysing rollout")
 
 
@@ -152,10 +152,10 @@ async def curriculum(body: CurriculumRequest) -> Ack:
 
 
 @app.post("/api/sim/batch", response_model=Ack)
-async def sim_batch(body: CurriculumRequest, tasks: BackgroundTasks) -> Ack:
+async def sim_batch(body: CurriculumRequest) -> Ack:
     if not orchestrator.curriculum:
         raise HTTPException(status_code=409, detail="No curriculum yet.")
-    tasks.add_task(orchestrator.run_targeted_batch, body.n_scenarios)
+    orchestrator.launch(orchestrator.run_targeted_batch(body.n_scenarios))
     return Ack(detail=f"running {body.n_scenarios} targeted scenarios")
 
 
@@ -181,15 +181,17 @@ async def metrics(body: PolicyMetrics) -> Ack:
 
 
 @app.post("/api/demo/run", response_model=Ack)
-async def demo_run(tasks: BackgroundTasks) -> Ack:
+async def demo_run() -> Ack:
     if bus.status.busy:
         raise HTTPException(status_code=409, detail="A run is already in progress.")
-    tasks.add_task(orchestrator.run_full_demo)
+    orchestrator.launch(orchestrator.run_full_demo())
     return Ack(detail="running the full loop")
 
 
 @app.post("/api/demo/reset", response_model=Ack)
 async def demo_reset() -> Ack:
+    # Stop the run before wiping it, or it keeps publishing into the next one.
+    await orchestrator.cancel_running()
     orchestrator.reset()
     return Ack(detail="demo reset")
 
