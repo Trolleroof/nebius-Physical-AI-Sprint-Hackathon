@@ -70,7 +70,7 @@ RULES: dict[FailureMode, list[tuple[SimParameter, float, float]]] = {
 #: an empty curriculum — an honest "we can't simulate this yet" is a better
 #: answer to a judge than a curriculum that does not address the diagnosis.
 UNMAPPABLE: dict[FailureMode, str] = {
-    FailureMode.OBJECT_SLIP: "needs a friction or mass parameter on so101_pick_place",
+    FailureMode.OBJECT_SLIP: "needs a friction or mass parameter on the simulated scene",
     FailureMode.PREMATURE_RELEASE: "needs a grip-force or actuation-timing parameter",
     FailureMode.COLLISION: "needs a traverse-height parameter",
 }
@@ -191,7 +191,7 @@ def sample_curriculum(changes: list[SimChange], n: int, seed: int = 0) -> list[d
     """Turn ranges into n concrete parameter sets, one per scenario run.
 
     The mapper reasons in ranges because that is what a diagnosis implies,
-    but Antioch's `--set KEY=VALUE` takes single values, so a curriculum of
+    but a simulator takes one concrete value per run, so a curriculum of
     thirty scenarios is thirty samples from those ranges.
 
     Sampling is stratified rather than uniform: each parameter's range is cut

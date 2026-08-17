@@ -95,7 +95,7 @@ export function StageView({ state, origin }: { state: DashboardState; origin?: O
               }
             />
             <span className="label text-[var(--color-ink)]">
-              {state.environment === "real" ? "Real SO-101" : "Antioch · Isaac"}
+              {state.environment === "real" ? "Real SO-101" : "Simulation"}
             </span>
             {origin && <SourceBadge origin={origin} />}
           </div>

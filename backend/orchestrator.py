@@ -6,7 +6,7 @@ holds the results the next one needs, which is why they are methods on one
 object rather than free functions.
 
 Nothing here knows how the critic or the simulator actually work; both
-arrive through the protocols in ``critic.py`` and ``antioch_client.py``. That
+arrive through the protocols in ``critic.py`` and ``sim_client.py``. That
 is the seam where mock becomes real, and it is the only place that changes.
 """
 
@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 
-from antioch_client import get_sim
+from sim_client import get_sim
 from critic import DEFAULT_TASK, get_critic
 from events import (
     BatchComplete,

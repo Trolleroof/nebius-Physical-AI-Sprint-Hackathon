@@ -31,9 +31,9 @@ app = FastAPI(title="Continual Embodied Learning", version="0.1.0")
 
 #: Rollout videos, batch thumbnails and saved diagnoses.
 #:
-#: Antioch's own artifact URLs are signed and expire, so anything the
-#: dashboard displays is downloaded here first and served by us. That also
-#: means the demo keeps working with no network, which matters at a booth.
+#: Everything the dashboard displays is served from here rather than fetched
+#: from a simulator or object store, so the demo keeps working with no
+#: network at all — which matters at a booth.
 ARTIFACTS = Path(__file__).resolve().parent.parent / "artifacts"
 for subdir in ("videos", "demo/batch", "diagnoses", "evals"):
     (ARTIFACTS / subdir).mkdir(parents=True, exist_ok=True)

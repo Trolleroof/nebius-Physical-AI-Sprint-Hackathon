@@ -37,9 +37,8 @@ def critic_source() -> Source:
 
 def sim_source() -> Source:
     backend = os.environ.get("SIM_BACKEND", "mock").lower()
-    if backend in {"antioch", "cli"}:
-        scenario = os.environ.get("ANTIOCH_SCENARIO", "so101_pick_place")
-        return Source(mode="live", detail=f"Antioch · {scenario}")
+    if backend != "mock":
+        return Source(mode="live", detail=backend)
     return Source(mode="mock", detail="simulated batch results")
 
 

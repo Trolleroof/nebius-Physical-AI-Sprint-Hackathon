@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Targeted Antioch runs, one cell per scenario.
+ * Targeted simulation runs, one cell per scenario.
  *
  * This is the flywheel made visible: one real failure filling a grid with
  * corrective experience. Cells land one at a time so the grid visibly fills
@@ -20,7 +20,7 @@ export function BatchGrid({ state, origin }: { state: DashboardState; origin?: O
 
   return (
     <Panel
-      title="Targeted Antioch runs"
+      title="Targeted simulation runs"
       origin={origin}
       live={!!batch && !batch.complete}
       right={

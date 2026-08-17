@@ -43,7 +43,7 @@ export function Header({
 
       <div className="hidden items-center gap-2 md:flex">
         <StatusDot tone={state.outcome === "running" ? "run" : "idle"} />
-        <span className="label">SO-101 · ACT · Antioch · Embodied critic</span>
+        <span className="label">SO-101 · ACT · Simulation · Embodied critic</span>
       </div>
 
       <div className="hatch h-2 w-16 opacity-25" />

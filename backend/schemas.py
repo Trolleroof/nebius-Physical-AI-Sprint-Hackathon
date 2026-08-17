@@ -62,15 +62,15 @@ class FailureMode(str, Enum):
 class SimParameter(str, Enum):
     """The only simulator knobs the mapper is permitted to turn.
 
-    These are exactly the keyword arguments of ``so101_pick_place`` in
-    sim/antioch/src/pick_place.py. That signature *is* the parameter schema:
-    Antioch rejects an unknown ``--set`` key at dispatch, so a parameter
-    invented here would surface as a hard failure rather than a silent no-op.
+    STALE: these are the parameters of the retired Antioch scenario, kept as
+    placeholders so the loop still runs end to end on the mock simulator.
+    They must be replaced with the MuJoCo scene's own parameters before the
+    real simulator is wired in.
 
-    The scenario is a scripted joint-space expert that reaches a fixed
-    radius, so only the *bearing* to the block and tray can vary — there is
-    no radial distance, friction, mass, yaw or injected noise. Adding one
-    means adding a typed keyword argument to the scenario first.
+    The rule that produced them still holds and should be applied again: a
+    parameter belongs here only once the simulator actually accepts it. An
+    invented one either fails loudly at dispatch or, worse, is silently
+    ignored while the dashboard shows it changing.
     """
 
     BLOCK_AZIMUTH = "block_azimuth"
@@ -78,8 +78,9 @@ class SimParameter(str, Enum):
 
 
 #: Hard limits per parameter, as ``(floor, ceiling, unit)``, taken from the
-#: ``ge=``/``le=`` on each ``antioch.param`` in the scenario. The critic may
-#: recommend anything; the mapper clamps into these before Antioch sees them.
+#: simulator's own declared bounds. The critic may recommend anything; the
+#: mapper clamps into these before the simulator sees them. Retarget these
+#: alongside SimParameter when the MuJoCo scene lands.
 PARAMETER_BOUNDS: dict[SimParameter, tuple[float, float, str]] = {
     SimParameter.BLOCK_AZIMUTH: (-0.9, 0.9, "rad"),
     SimParameter.TRAY_AZIMUTH: (-0.9, 0.9, "rad"),
