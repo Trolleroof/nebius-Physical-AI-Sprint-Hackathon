@@ -15,14 +15,16 @@ import { motion } from "motion/react";
 import { PARAMETER_META } from "@/lib/contract";
 import { DashboardState } from "@/lib/reducer";
 import { Awaiting, Meter, Panel } from "./ui";
+import { Origin } from "@/lib/provenance";
 
-export function RealityToSim({ state }: { state: DashboardState }) {
+export function RealityToSim({ state, origin }: { state: DashboardState; origin?: Origin }) {
   const causes = state.diagnosis?.estimated_causes ?? [];
   const curriculum = state.curriculum;
 
   return (
     <Panel
       title="Reality → simulation"
+      origin={origin}
       right={
         curriculum && (
           <span className="label text-[var(--color-accent)]">{curriculum.nScenarios} scenarios</span>

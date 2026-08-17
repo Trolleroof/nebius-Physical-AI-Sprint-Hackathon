@@ -2,6 +2,31 @@
 
 import { motion } from "motion/react";
 import { ReactNode } from "react";
+import { Origin } from "@/lib/provenance";
+
+/**
+ * Where this panel's data came from, stated on the panel itself.
+ *
+ * Live is the only one that gets colour — everything else is deliberately
+ * quiet, so the badges read as honesty rather than as warnings.
+ */
+export function SourceBadge({ origin }: { origin: Origin }) {
+  const style = {
+    live: "border-[var(--color-ok)]/40 bg-[var(--color-ok)]/10 text-[var(--color-ok)]",
+    replay: "border-[var(--color-warn)]/30 bg-[var(--color-warn)]/5 text-[var(--color-warn)]",
+    scripted: "border-[var(--color-line-strong)] text-[var(--color-muted)]",
+    mock: "border-[var(--color-line)] text-[var(--color-dim)]",
+  }[origin.mode];
+
+  return (
+    <span
+      title={origin.detail}
+      className={`shrink-0 rounded-[1px] border px-1.5 py-px font-mono text-[8px] tracking-[0.16em] uppercase ${style}`}
+    >
+      {origin.mode}
+    </span>
+  );
+}
 
 /**
  * Shared HUD primitives. Panels never appear or disappear during a run —
@@ -16,17 +41,20 @@ export function Panel({
   children,
   className = "",
   live = false,
+  origin,
 }: {
   title: string;
   right?: ReactNode;
   children: ReactNode;
   className?: string;
   live?: boolean;
+  origin?: Origin;
 }) {
   return (
     <section className={`panel bracket flex min-h-0 flex-col ${className}`}>
       <header className="flex shrink-0 items-center gap-3 border-b border-[var(--color-line)] px-3 py-2">
         <h2 className="label text-[var(--color-ink)]">{title}</h2>
+        {origin && <SourceBadge origin={origin} />}
         <div className="hatch h-2 flex-1 opacity-30" />
         {live && <span className="size-1.5 rounded-full bg-[var(--color-accent)] pulse" />}
         {right}

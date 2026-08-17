@@ -16,11 +16,13 @@ import { ImprovementStrip } from "@/components/ImprovementStrip";
 import { LoopRail } from "@/components/LoopRail";
 import { RealityToSim } from "@/components/RealityToSim";
 import { StageView } from "@/components/StageView";
+import { useProvenance } from "@/lib/provenance";
 import { useRun } from "@/lib/useRun";
 
 export default function Dashboard() {
   const replay = useRun();
   const { state } = replay;
+  const origin = useProvenance(replay.source);
 
   return (
     <div className="relative flex h-full flex-col">
@@ -38,18 +40,18 @@ export default function Dashboard() {
 
           <main className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[1.55fr_1fr] gap-2 p-2 lg:grid-cols-[1.6fr_1fr]">
             {/* Evidence column */}
-            <StageView state={state} />
+            <StageView state={state} origin={origin.robot} />
             {/* Reasoning column */}
-            <FailurePanel state={state} />
-            <BatchGrid state={state} />
-            <RealityToSim state={state} />
+            <FailurePanel state={state} origin={origin.critic} />
+            <BatchGrid state={state} origin={origin.sim} />
+            <RealityToSim state={state} origin={origin.critic} />
           </main>
 
           <RightRail />
         </div>
 
         <div className="shrink-0 px-2 pb-2">
-          <ImprovementStrip state={state} />
+          <ImprovementStrip state={state} origin={origin.metrics} />
         </div>
       </div>
 
