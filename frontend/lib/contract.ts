@@ -24,31 +24,19 @@ export type FailureMode =
   | "none"
   | "unknown";
 
-export type SimParameter =
-  | "object_friction"
-  | "object_mass"
-  | "object_x"
-  | "object_y"
-  | "object_yaw"
-  | "grasp_pose_noise"
-  | "camera_pose_noise"
-  | "action_delay"
-  | "joint_target_noise";
+/** The keyword arguments of so101_pick_place — nothing else can be varied. */
+export type SimParameter = "pick_x" | "pick_y" | "place_x" | "place_y" | "travel_z";
 
 /** Below this the UI says "critic unsure" instead of printing a percentage. */
 export const CONFIDENCE_FLOOR = 0.35;
 
 /** Display labels and units. Keep in sync with PARAMETER_BOUNDS in schemas.py. */
 export const PARAMETER_META: Record<SimParameter, { label: string; unit: string }> = {
-  object_friction: { label: "Friction", unit: "μ" },
-  object_mass: { label: "Mass", unit: "×" },
-  object_x: { label: "Object X", unit: "m" },
-  object_y: { label: "Object Y", unit: "m" },
-  object_yaw: { label: "Object yaw", unit: "°" },
-  grasp_pose_noise: { label: "Grasp noise", unit: "mm" },
-  camera_pose_noise: { label: "Camera noise", unit: "mm" },
-  action_delay: { label: "Action delay", unit: "ms" },
-  joint_target_noise: { label: "Joint noise", unit: "°" },
+  pick_x: { label: "Block X", unit: "m" },
+  pick_y: { label: "Block Y", unit: "m" },
+  place_x: { label: "Tray X", unit: "m" },
+  place_y: { label: "Tray Y", unit: "m" },
+  travel_z: { label: "Traverse height", unit: "m" },
 };
 
 export interface EstimatedCause {
@@ -142,6 +130,7 @@ export type RobotEvent = Envelope &
         changes: SimChange[];
         n_scenarios: number;
         baseline: Record<string, number>;
+        unmappable_reason: string | null;
       }
     | { type: "batch_started"; curriculum_id: string; n_scenarios: number }
     | { type: "batch_progress"; index: number; total: number; success: boolean; thumbnail_url: string | null }

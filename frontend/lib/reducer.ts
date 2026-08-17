@@ -43,6 +43,7 @@ export interface DashboardState {
     changes: SimChange[];
     baseline: Record<string, number>;
     nScenarios: number;
+    unmappableReason: string | null;
   } | null;
 
   /** One slot per targeted scenario; null until that scenario reports. */
@@ -102,6 +103,13 @@ function advanceRail(state: DashboardState, next: LoopStage): DashboardState["ra
 }
 
 export function reduce(state: DashboardState, event: RobotEvent): DashboardState {
+  // A new run wipes the board. Otherwise the previous run's diagnosis, batch
+  // grid and metrics stay on screen underneath the new one — the panels only
+  // ever populate, so nothing else would clear them.
+  if (state.runId !== null && event.run_id !== state.runId) {
+    state = initialState();
+  }
+
   // Out-of-order or duplicate delivery: keep the newer view of the world.
   if (event.seq <= state.lastSeq && state.lastSeq !== -1) return state;
 
@@ -187,6 +195,7 @@ export function reduce(state: DashboardState, event: RobotEvent): DashboardState
         changes: event.changes,
         baseline: event.baseline,
         nScenarios: event.n_scenarios,
+        unmappableReason: event.unmappable_reason ?? null,
       };
       break;
 
