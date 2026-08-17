@@ -19,11 +19,14 @@ than assumed:
   * In the gripper link frame the fingers extend along -Z, the jaw closes along
     +X against a fixed finger whose inner face sits at x = -0.0438, and the pad
     region spans z in [-0.115, -0.03].
+  * Manipuland: red trapezoid SM_TrapezoidRed_01 — 30.48 mm grasp width on the
+    parallel ±Y faces (see trapezoid_block.py for measured dimensions).
 """
 
 from __future__ import annotations
 
 import antioch
+from trapezoid_block import GRASP_WIDTH, HEIGHT
 
 logger = antioch.Logger("pickplace")
 
@@ -32,13 +35,12 @@ GRIPPER_LINK = 5
 N_DOF = 6
 
 # Grasp centre in the gripper link frame: midway between the fixed finger's
-# inner face and where the moving jaw meets a 30 mm block, at pad height.
-BLOCK = 0.030
-TCP_LOCAL = (-0.0438 + BLOCK / 2.0, 0.0, -0.085)
+# inner face and where the moving jaw meets the 30.48 mm block, at pad height.
+TCP_LOCAL = (-0.0438 + GRASP_WIDTH / 2.0, 0.0, -0.085)
 
 # Jaw angle -> gap, measured: -0.17 closed, +0.30 ~ 19.9 mm, +0.80 ~ 47.5 mm.
 JAW_OPEN = 0.90
-JAW_GRIP = 0.36  # just inside contact on a 30 mm block, so the drive preloads
+JAW_GRIP = 0.36  # just inside contact on the 30.48 mm trapezoid, preloads the drive
 
 
 def _quat_to_mat(q):
@@ -88,13 +90,13 @@ def so101_pick_place(
     """Pick a block off the table and place it in the tray."""
 
     import numpy as np
-    from isaacsim.core.api.objects import DynamicCuboid
     from isaacsim.core.experimental.prims import Articulation, RigidPrim
     from isaacsim.core.utils.prims import create_prim
     from isaacsim.core.utils.types import ArticulationAction
     from isaacsim.core.prims import SingleArticulation
     from isaacsim.core.utils.viewports import set_camera_view
 
+    from trapezoid_block import add_trapezoid_block
     from wooden_tray import add_wooden_tray
 
     world = antioch.world()
@@ -104,17 +106,9 @@ def so101_pick_place(
 
     antioch.load_asset(ARM_ASSET, prim_path="/World/SO101", version=ARM_VERSION)
     add_wooden_tray(world, center=(place_x, place_y), outer_size=(0.30, 0.18))
-    block = world.scene.add(
-        DynamicCuboid(
-            prim_path="/World/block",
-            name="block",
-            position=np.array([pick_x, pick_y, BLOCK / 2.0]),
-            size=BLOCK,
-            color=np.array([0.78, 0.14, 0.10]),
-            mass=0.02,
-        )
-    )
+    block = add_trapezoid_block(world, (pick_x, pick_y, HEIGHT / 2.0))
     world.reset()
+    block.bind()
 
     single = SingleArticulation(prim_path="/World/SO101", name="so101")
     single.initialize()
@@ -133,31 +127,45 @@ def so101_pick_place(
         R = _quat_to_mat(q)
         return p + R @ tcp_local, R
 
-    def ik_step(target_pos, target_R, jaw, gain=0.8, damping=0.04):
+    def ik_step(target_pos, target_R, jaw, gain=0.8, damping=0.04, rot_weight=0.5):
         """One resolved-rate step toward the target; returns the pose error."""
         q_now = np.asarray(single.get_joint_positions(), dtype=np.float64)
         pos, R = tcp_pose()
 
         err = np.zeros(6)
         err[:3] = target_pos - pos
-        err[3:] = _rot_error(target_R, R)
+        # A 5-DoF arm has exactly enough freedom for position (3) plus an
+        # approach direction (2). Demanding yaw as well is the 6th constraint it
+        # does not have: measured, it pinned Wrist_Pitch at its 1.658 rad stop
+        # and parked ~50 mm short of every waypoint. So project the rotation
+        # error onto the plane perpendicular to the finger axis, which discards
+        # exactly the yaw component. The trapezoid has parallel ±Y grasp faces;
+        # yaw=0 aligns the jaw with the 30.48 mm width.
+        rot_err = _rot_error(target_R, R)
+        approach = R[:, 2]  # fingers run along -Z, so this is the spin axis
+        err[3:] = rot_weight * (rot_err - np.dot(rot_err, approach) * approach)
 
-        # joint columns are the LAST six of the floating-base jacobian
+        # joint columns are the LAST six of the floating-base jacobian, and the
+        # last of those is Jaw, which moves the fingers but not the TCP.
+        # Leaving it in makes the square solve near-singular.
         J_full = arm.get_jacobian_matrices().numpy()[0, GRIPPER_LINK]
-        J = np.array(J_full[:, -N_DOF:], dtype=np.float64)
+        J = np.array(J_full[:, -N_DOF:-1], dtype=np.float64)  # 6 x 5, arm only
         # shift the linear rows from the link origin out to the TCP
         r = R @ tcp_local
         skew = np.array([[0, -r[2], r[1]], [r[2], 0, -r[0]], [-r[1], r[0], 0]])
         J[:3, :] = J[:3, :] - skew @ J[3:, :]
+        J[3:, :] = rot_weight * J[3:, :]
 
-        dq = J.T @ np.linalg.solve(J @ J.T + (damping**2) * np.eye(6), err * gain)
-        q_cmd = q_now + np.clip(dq, -0.08, 0.08)
+        # over-determined (6 rows, 5 joints): damped least squares on J^T J
+        dq = np.linalg.solve(J.T @ J + (damping**2) * np.eye(5), J.T @ (err * gain))
+        q_cmd = q_now.copy()
+        q_cmd[:5] = q_now[:5] + np.clip(dq, -0.08, 0.08)
         q_cmd[5] = jaw
         single.apply_action(ArticulationAction(joint_positions=q_cmd.astype(np.float32)))
         return float(np.linalg.norm(err[:3])), float(np.linalg.norm(err[3:]))
 
-    grasp_z = BLOCK / 2.0
-    yaw = 0.0
+    grasp_z = HEIGHT / 2.0
+    yaw = 0.0  # jaw closes on the parallel Y faces of the trapezoid
     waypoints = [
         ("approach", (pick_x, pick_y, travel_z), JAW_OPEN, 110),
         ("descend", (pick_x, pick_y, grasp_z), JAW_OPEN, 110),
@@ -175,8 +183,10 @@ def so101_pick_place(
         target = np.array(target, dtype=float)
         R_des = _tool_down(yaw)
         pe = re = float("nan")
+        trace = []
         for tick in range(ticks):
             pe, re = ik_step(target, R_des, jaw)
+            trace.append(pe)
             world.step(render=True)
             logger.scalar(f"error/{name}", pe)
             if tick % 25 == 0:
@@ -188,7 +198,17 @@ def so101_pick_place(
                         frames += 1
         worst[name] = round(pe, 4)
         block_p = block.get_world_pose()[0]
-        print(f"  {name:9s} tcp_err={pe * 1000:6.1f}mm rot_err={re:5.3f}rad block={np.round(block_p, 3).tolist()}")
+        q_now = np.asarray(single.get_joint_positions(), dtype=float)
+        lo = np.asarray(single.get_articulation_controller().get_joint_limits(), dtype=float)
+        at_limit = [
+            single.dof_names[i]
+            for i in range(5)
+            if abs(q_now[i] - lo[i][0]) < 0.02 or abs(q_now[i] - lo[i][1]) < 0.02
+        ]
+        print(
+            f"  {name:9s} err {trace[0]*1000:6.1f} -> {trace[len(trace)//2]*1000:6.1f} -> {trace[-1]*1000:6.1f} mm"
+            f"  rot={re:5.3f}  q={np.round(q_now[:5],2).tolist()}  at_limit={at_limit}"
+        )
 
     for _ in range(120):
         world.step(render=True)

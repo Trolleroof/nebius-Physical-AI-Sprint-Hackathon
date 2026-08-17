@@ -30,25 +30,17 @@ def wooden_tray_probe(
 ) -> None:
     """Validate the wooden placement tray geometry in Isaac Sim."""
 
-    import numpy as np
-    from isaacsim.core.api.objects import DynamicCuboid
     from isaacsim.core.utils.viewports import set_camera_view
 
+    from trapezoid_block import HEIGHT, add_trapezoid_block
     from wooden_tray import add_wooden_tray
 
     world = antioch.world()
     world.scene.add_ground_plane()
     add_wooden_tray(world)
-    cube = world.scene.add(
-        DynamicCuboid(
-            prim_path="/World/test_block",
-            name="test_block",
-            position=np.array([-0.11, -0.13, 0.08]),
-            size=0.03,
-            color=np.array([0.75, 0.08, 0.04]),
-        )
-    )
+    block = add_trapezoid_block(world, (-0.11, -0.13, HEIGHT / 2.0))
     world.reset()
+    block.bind()
     set_camera_view(
         eye=[0.45, -0.55, 0.42],
         target=[-0.11, -0.13, 0.02],
@@ -57,9 +49,9 @@ def wooden_tray_probe(
     for _ in range(steps):
         world.step(render=True)
 
-    final_z = float(cube.get_world_pose()[0][2])
+    final_z = float(block.get_world_pose()[0][2])
     run.add_result("final_z", round(final_z, 4))
-    run.check("the block settled in the wooden tray", 0.005 < final_z < 0.04, detail=f"block centre settled at {final_z:.3f} m")
+    run.check("the trapezoid settled in the wooden tray", 0.005 < final_z < 0.04, detail=f"block centre settled at {final_z:.3f} m")
 
 
 # `capture=False` turns off the automatic platform viewport, which points
