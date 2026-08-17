@@ -1,0 +1,29 @@
+# The id is the immutable identity used by Antioch machines.
+id: "antioch-4c5b06ecbbf24226aad651a21954bc53"
+name: "antioch"
+scenario_paths: ["src/scenarios.py", "src/pick_place.py"]
+
+services:
+  sim:
+    image: "antioch-engine/isaac-sim-6.0.1"
+    watch:
+      - action: sync
+        path: .
+        target: /workspace/project
+    # ports are reachable at localhost:<published> while the services are up
+    #   - name: viewer
+    #     target: 8080
+    #     published: 8080
+    # declared ports stay open after `antioch services up` returns
+    # `antioch services down` closes them
+
+# Each suite is the ordered union of its select clauses.
+suites:
+  smoke:
+    description: "Fast engine smoke checks"
+    select:
+      - tags: ["smoke"]
+  sweep:
+    description: "Every case of the parameter sweep"
+    select:
+      - tags: ["sweep"]
