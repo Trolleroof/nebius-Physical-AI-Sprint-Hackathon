@@ -73,10 +73,23 @@ class EventBus:
             self._subscribers.discard(queue)
 
     def reset(self) -> None:
-        """Wipe the run. Backs the dashboard's RESET DEMO control."""
+        """Wipe the run. Backs the dashboard's RESET DEMO control.
+
+        ``_seq`` deliberately keeps counting. It is not a position in the
+        current run, it is the ordering the dashboard dedupes against: the
+        reducer ignores any event whose seq it has already seen. Restarting
+        the count at 0 therefore made an already-connected dashboard discard
+        the opening of the next run — as many events as the previous run was
+        long, so after a full demo the entire next run was invisible. Only the
+        browser that pressed RESET escaped it, because it cleared its own
+        state at the same time; a second screen just stopped updating.
+
+        ``busy`` survives the wipe because ``run_full_demo`` resets *inside*
+        the run, and a fresh ``RunStatus`` there would clear the flag that
+        makes ``POST /api/demo/run`` reject a double start.
+        """
         self._history.clear()
-        self._seq = 0
-        self.status = RunStatus()
+        self.status = RunStatus(busy=self.status.busy)
 
 
 bus = EventBus()

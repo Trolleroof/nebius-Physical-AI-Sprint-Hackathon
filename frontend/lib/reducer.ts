@@ -103,6 +103,13 @@ function advanceRail(state: DashboardState, next: LoopStage): DashboardState["ra
 }
 
 export function reduce(state: DashboardState, event: RobotEvent): DashboardState {
+  // A new run wipes the board. Otherwise the previous run's diagnosis, batch
+  // grid and metrics stay on screen underneath the new one — the panels only
+  // ever populate, so nothing else would clear them.
+  if (state.runId !== null && event.run_id !== state.runId) {
+    state = initialState();
+  }
+
   // Out-of-order or duplicate delivery: keep the newer view of the world.
   if (event.seq <= state.lastSeq && state.lastSeq !== -1) return state;
 

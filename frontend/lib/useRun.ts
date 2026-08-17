@@ -57,14 +57,18 @@ function useLive(enabled: boolean) {
     return () => source.close();
   }, [enabled]);
 
-  const post = useCallback((path: string) => {
-    fetch(`${API}${path}`, { method: "POST" }).catch(() => {});
-  }, []);
+  const post = useCallback(
+    (path: string) => fetch(`${API}${path}`, { method: "POST" }).catch(() => {}),
+    [],
+  );
 
-  const restart = useCallback(() => {
+  const restart = useCallback(async () => {
     setState(initialState());
     setEvents([]);
-    post("/api/demo/reset");
+    // Ordered, not fired together: reset now cancels the run in flight and
+    // waits for it to stop, so a concurrent /api/demo/run would be started
+    // and then wiped by the reset that was still finishing.
+    await post("/api/demo/reset");
     post("/api/demo/run");
   }, [post]);
 
