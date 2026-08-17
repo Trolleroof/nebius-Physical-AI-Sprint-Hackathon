@@ -44,9 +44,8 @@ Rules:
   grasp_offset), each with its own confidence.
 - `recommended_sim_changes` may only name these parameters, which are the
   keyword arguments of the simulated task:
-  pick_x, pick_y (block position, metres)
-  place_x, place_y (tray position, metres)
-  travel_z (height the gripper traverses at, metres)
+  block_x, block_y (block position on the table, metres)
+  tray_x, tray_y (tray centre position, metres)
   If the physical cause you suspect has no parameter here, say so in
   `estimated_causes` and leave `recommended_sim_changes` empty rather than
   naming a parameter that does not exist.
@@ -82,10 +81,10 @@ class MockCritic:
                     {"cause": "reach_error", "confidence": 0.24},
                 ],
                 "recommended_sim_changes": [
-                    {"parameter": "pick_y", "min": -0.18, "max": 0.10},
+                    {"parameter": "block_y", "min": -0.17, "max": -0.10},
                     # Deliberately near-full-range: exercises the mapper's
                     # rejection of uninformative recommendations on every run.
-                    {"parameter": "pick_x", "min": 0.15, "max": 0.45},
+                    {"parameter": "block_x", "min": 0.10, "max": 0.50},
                 ],
                 "summary": (
                     "The gripper closed beside the block rather than around "

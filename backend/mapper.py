@@ -29,11 +29,10 @@ from schemas import (
 #: Nominal scenario values — the defaults on ``so101_pick_place``. The
 #: dashboard renders these as the "before" side of `0.32 -> 0.24-0.40`.
 BASELINE_SCENARIO: dict[SimParameter, float] = {
-    SimParameter.PICK_X: 0.32,
-    SimParameter.PICK_Y: -0.06,
-    SimParameter.PLACE_X: 0.30,
-    SimParameter.PLACE_Y: 0.16,
-    SimParameter.TRAVEL_Z: 0.14,
+    SimParameter.BLOCK_X: 0.3464,
+    SimParameter.BLOCK_Y: -0.1361,
+    SimParameter.TRAY_X: 0.3395,
+    SimParameter.TRAY_Y: 0.1744,
 }
 
 #: Fallback curriculum per failure mode, in the spirit of plan section 10 but
@@ -47,31 +46,30 @@ BASELINE_SCENARIO: dict[SimParameter, float] = {
 #: an empty curriculum, and the dashboard says so rather than inventing work.
 #: Extending coverage means adding a typed parameter to the scenario first.
 RULES: dict[FailureMode, list[tuple[SimParameter, float, float]]] = {
-    # Grasp went wrong: give the policy a wider spread of block positions.
+    # Ranges hug the scenario's own declared sweep cases (block_x 0.31-0.37,
+    # block_y -0.16..-0.12) rather than the legal bounds. The legal range is
+    # 0.10-0.50, but the arm is a scripted joint-space expert reaching a known
+    # radius, so sampling the full span would mostly generate poses it cannot
+    # reach — noise, not curriculum.
     FailureMode.FAILED_GRASP: [
-        (SimParameter.PICK_X, 0.24, 0.40),
-        (SimParameter.PICK_Y, -0.18, 0.10),
+        (SimParameter.BLOCK_X, 0.31, 0.37),
+        (SimParameter.BLOCK_Y, -0.17, -0.10),
     ],
     FailureMode.MISSED_OBJECT: [
-        (SimParameter.PICK_X, 0.22, 0.42),
-        (SimParameter.PICK_Y, -0.22, 0.14),
+        (SimParameter.BLOCK_X, 0.29, 0.39),
+        (SimParameter.BLOCK_Y, -0.20, -0.08),
     ],
     FailureMode.BAD_ALIGNMENT: [
-        (SimParameter.PICK_X, 0.26, 0.38),
-        (SimParameter.PICK_Y, -0.16, 0.08),
+        (SimParameter.BLOCK_X, 0.32, 0.37),
+        (SimParameter.BLOCK_Y, -0.16, -0.11),
     ],
     FailureMode.UNREACHABLE_POSE: [
-        (SimParameter.PICK_X, 0.18, 0.44),
-        (SimParameter.PICK_Y, -0.30, 0.30),
+        (SimParameter.BLOCK_X, 0.28, 0.42),
+        (SimParameter.BLOCK_Y, -0.22, -0.06),
     ],
-    # Placement went wrong: vary where the tray is, not where the block is.
     FailureMode.PLACEMENT_ERROR: [
-        (SimParameter.PLACE_X, 0.24, 0.38),
-        (SimParameter.PLACE_Y, 0.08, 0.26),
-    ],
-    # Hit something in transit: vary the traverse height.
-    FailureMode.COLLISION: [
-        (SimParameter.TRAVEL_Z, 0.10, 0.22),
+        (SimParameter.TRAY_X, 0.30, 0.38),
+        (SimParameter.TRAY_Y, 0.13, 0.22),
     ],
 }
 
@@ -82,20 +80,20 @@ RULES: dict[FailureMode, list[tuple[SimParameter, float, float]]] = {
 UNMAPPABLE: dict[FailureMode, str] = {
     FailureMode.OBJECT_SLIP: "needs a friction or mass parameter on so101_pick_place",
     FailureMode.PREMATURE_RELEASE: "needs a grip-force or actuation-timing parameter",
+    FailureMode.COLLISION: "needs a traverse-height parameter; travel_z was removed "
+    "when the scenario moved to a scripted joint-space expert",
 }
 
 #: Causes the critic names in prose, mapped to the knob they implicate. Lets a
 #: confident cause pull in a parameter the failure-mode rule alone would miss.
 CAUSE_HINTS: dict[str, SimParameter] = {
-    "object_pose": SimParameter.PICK_X,
-    "block_position": SimParameter.PICK_X,
-    "reach_error": SimParameter.PICK_X,
-    "lateral_offset": SimParameter.PICK_Y,
-    "depth_error": SimParameter.PICK_Y,
-    "tray_position": SimParameter.PLACE_X,
-    "placement_offset": SimParameter.PLACE_Y,
-    "traverse_height": SimParameter.TRAVEL_Z,
-    "clearance": SimParameter.TRAVEL_Z,
+    "object_pose": SimParameter.BLOCK_X,
+    "block_position": SimParameter.BLOCK_X,
+    "reach_error": SimParameter.BLOCK_X,
+    "lateral_offset": SimParameter.BLOCK_Y,
+    "depth_error": SimParameter.BLOCK_Y,
+    "tray_position": SimParameter.TRAY_X,
+    "placement_offset": SimParameter.TRAY_Y,
 }
 
 #: A cause below this confidence does not get to add a parameter of its own.

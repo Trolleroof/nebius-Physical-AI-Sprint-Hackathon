@@ -118,12 +118,12 @@ diagnosis = FailureDiagnosis(
         EstimatedCause(cause="other", confidence=0.07),
     ],
     recommended_sim_changes=[
-        SimChange(parameter=SimParameter.PICK_Y, min=-0.18, max=0.10),
+        SimChange(parameter=SimParameter.BLOCK_Y, min=-0.17, max=-0.10),
         # Deliberately near-full-range: the critic asks to vary pick_x across
         # almost its entire legal span, which says nothing about where the
         # policy is weak. The mapper rejects it for the targeted rule and
         # flags the override, so the guardrail is visible on screen.
-        SimChange(parameter=SimParameter.PICK_X, min=0.15, max=0.45),
+        SimChange(parameter=SimParameter.BLOCK_X, min=0.10, max=0.50),
     ],
     summary="The gripper closed beside the block rather than around it, catching only its near edge.",
 )
@@ -136,10 +136,10 @@ emit(
         run_id=RUN_ID,
         curriculum_id="curr-001",
         n_scenarios=30,
-        baseline={"pick_y": -0.06, "pick_x": 0.32},
+        baseline={"block_y": -0.1361, "block_x": 0.3464},
         changes=[
-            SimChange(parameter=SimParameter.PICK_Y, min=-0.18, max=0.10),
-            SimChange(parameter=SimParameter.PICK_X, min=0.24, max=0.40, clamped=True),
+            SimChange(parameter=SimParameter.BLOCK_Y, min=-0.17, max=-0.10),
+            SimChange(parameter=SimParameter.BLOCK_X, min=0.31, max=0.37, clamped=True),
         ],
     ),
     gap=1.1,

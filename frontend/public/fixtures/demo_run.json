@@ -119,15 +119,15 @@
         ],
         "recommended_sim_changes": [
           {
-            "parameter": "pick_y",
-            "min": -0.18,
-            "max": 0.1,
+            "parameter": "block_y",
+            "min": -0.17,
+            "max": -0.1,
             "clamped": false
           },
           {
-            "parameter": "pick_x",
-            "min": 0.15,
-            "max": 0.45,
+            "parameter": "block_x",
+            "min": 0.1,
+            "max": 0.5,
             "clamped": false
           }
         ],
@@ -143,23 +143,24 @@
       "curriculum_id": "curr-001",
       "changes": [
         {
-          "parameter": "pick_y",
-          "min": -0.18,
-          "max": 0.1,
+          "parameter": "block_y",
+          "min": -0.17,
+          "max": -0.1,
           "clamped": false
         },
         {
-          "parameter": "pick_x",
-          "min": 0.24,
-          "max": 0.4,
+          "parameter": "block_x",
+          "min": 0.31,
+          "max": 0.37,
           "clamped": true
         }
       ],
       "n_scenarios": 30,
       "baseline": {
-        "pick_y": -0.06,
-        "pick_x": 0.32
-      }
+        "block_y": -0.1361,
+        "block_x": 0.3464
+      },
+      "unmappable_reason": null
     },
     {
       "ts": 1755432670.3,

@@ -25,18 +25,17 @@ export type FailureMode =
   | "unknown";
 
 /** The keyword arguments of so101_pick_place — nothing else can be varied. */
-export type SimParameter = "pick_x" | "pick_y" | "place_x" | "place_y" | "travel_z";
+export type SimParameter = "block_x" | "block_y" | "tray_x" | "tray_y";
 
 /** Below this the UI says "critic unsure" instead of printing a percentage. */
 export const CONFIDENCE_FLOOR = 0.35;
 
 /** Display labels and units. Keep in sync with PARAMETER_BOUNDS in schemas.py. */
 export const PARAMETER_META: Record<SimParameter, { label: string; unit: string }> = {
-  pick_x: { label: "Block X", unit: "m" },
-  pick_y: { label: "Block Y", unit: "m" },
-  place_x: { label: "Tray X", unit: "m" },
-  place_y: { label: "Tray Y", unit: "m" },
-  travel_z: { label: "Traverse height", unit: "m" },
+  block_x: { label: "Block X", unit: "m" },
+  block_y: { label: "Block Y", unit: "m" },
+  tray_x: { label: "Tray X", unit: "m" },
+  tray_y: { label: "Tray Y", unit: "m" },
 };
 
 export interface EstimatedCause {

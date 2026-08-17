@@ -72,22 +72,20 @@ class SimParameter(str, Enum):
     adding a typed keyword argument to the scenario first.
     """
 
-    PICK_X = "pick_x"
-    PICK_Y = "pick_y"
-    PLACE_X = "place_x"
-    PLACE_Y = "place_y"
-    TRAVEL_Z = "travel_z"
+    BLOCK_X = "block_x"
+    BLOCK_Y = "block_y"
+    TRAY_X = "tray_x"
+    TRAY_Y = "tray_y"
 
 
 #: Hard limits per parameter, as ``(floor, ceiling, unit)``, taken from the
 #: ``ge=``/``le=`` on each ``antioch.param`` in the scenario. The critic may
 #: recommend anything; the mapper clamps into these before Antioch sees them.
 PARAMETER_BOUNDS: dict[SimParameter, tuple[float, float, str]] = {
-    SimParameter.PICK_X: (0.15, 0.45, "m"),
-    SimParameter.PICK_Y: (-0.35, 0.35, "m"),
-    SimParameter.PLACE_X: (0.15, 0.45, "m"),
-    SimParameter.PLACE_Y: (-0.35, 0.35, "m"),
-    SimParameter.TRAVEL_Z: (0.06, 0.30, "m"),
+    SimParameter.BLOCK_X: (0.10, 0.50, "m"),
+    SimParameter.BLOCK_Y: (-0.40, 0.40, "m"),
+    SimParameter.TRAY_X: (0.10, 0.50, "m"),
+    SimParameter.TRAY_Y: (-0.40, 0.40, "m"),
 }
 
 
