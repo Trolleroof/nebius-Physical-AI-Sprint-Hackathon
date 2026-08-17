@@ -11,8 +11,9 @@
 import { motion } from "motion/react";
 import { DashboardState } from "@/lib/reducer";
 import { Awaiting, Panel } from "./ui";
+import { Origin } from "@/lib/provenance";
 
-export function BatchGrid({ state }: { state: DashboardState }) {
+export function BatchGrid({ state, origin }: { state: DashboardState; origin?: Origin }) {
   const batch = state.batch;
   const done = batch ? batch.results.filter((r) => r !== null).length : 0;
   const passed = batch ? batch.results.filter((r) => r === true).length : 0;
@@ -20,6 +21,7 @@ export function BatchGrid({ state }: { state: DashboardState }) {
   return (
     <Panel
       title="Targeted Antioch runs"
+      origin={origin}
       live={!!batch && !batch.complete}
       right={
         batch && (

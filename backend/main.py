@@ -23,6 +23,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from orchestrator import orchestrator
+from provenance import Source, snapshot
 from schemas import PolicyMetrics
 from state import RunStatus, bus
 
@@ -85,6 +86,16 @@ async def events() -> StreamingResponse:
 @app.get("/api/status", response_model=RunStatus)
 async def status() -> RunStatus:
     return bus.status
+
+
+@app.get("/api/provenance")
+async def provenance() -> dict[str, Source]:
+    """Which subsystems are real right now, and which are standing in.
+
+    The dashboard labels every panel from this, so a replayed batch can
+    never be mistaken for a live one (plan section 20).
+    """
+    return snapshot(orchestrator.metrics_measured)
 
 
 @app.get("/api/history")

@@ -13,7 +13,8 @@
 
 import { motion } from "motion/react";
 import { DashboardState } from "@/lib/reducer";
-import { Ticker } from "./ui";
+import { SourceBadge, Ticker } from "./ui";
+import { Origin } from "@/lib/provenance";
 
 function cellTone(value: string | null) {
   if (!value) return "text-[var(--color-dim)]";
@@ -22,7 +23,7 @@ function cellTone(value: string | null) {
   return "text-[var(--color-ink)]";
 }
 
-export function ImprovementStrip({ state }: { state: DashboardState }) {
+export function ImprovementStrip({ state, origin }: { state: DashboardState; origin?: Origin }) {
   const metrics = state.metrics;
   const rows = metrics?.rows ?? [
     { label: "Baseline sim", v0: null, v1: null },
@@ -33,7 +34,10 @@ export function ImprovementStrip({ state }: { state: DashboardState }) {
   return (
     <section className="panel bracket flex shrink-0 items-stretch gap-6 px-4 py-2.5">
       <div className="flex shrink-0 flex-col justify-center">
-        <span className="label">policy improvement</span>
+        <div className="flex items-center gap-2">
+          <span className="label">policy improvement</span>
+          {origin && <SourceBadge origin={origin} />}
+        </div>
         <span className="font-mono text-[10px] text-[var(--color-dim)]">
           {metrics
             ? `${metrics.initial_demos} + ${metrics.corrective_demos} demos · ${metrics.held_out_scenarios}-scenario held-out set`

@@ -60,6 +60,8 @@ class Orchestrator:
         self.curriculum: list[SimChange] = []
         self.batch_results: list[bool] = []
         self.last_video: str | None = None
+        #: True once someone POSTs real figures to /api/metrics.
+        self.metrics_measured = False
         self._lock = asyncio.Lock()
         self._tasks: set[asyncio.Task] = set()
 
@@ -103,6 +105,7 @@ class Orchestrator:
         self.curriculum = []
         self.batch_results = []
         self.last_video = None
+        self.metrics_measured = False
         bus.reset()
 
     # --- phases -------------------------------------------------------------
@@ -266,6 +269,7 @@ class Orchestrator:
         """
         run_id = self._ensure_run()
         bus.status.stage = "learning"
+        self.metrics_measured = metrics is not None
         await bus.publish(
             MetricsReady(
                 run_id=run_id,

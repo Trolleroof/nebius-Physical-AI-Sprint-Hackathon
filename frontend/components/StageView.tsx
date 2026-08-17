@@ -14,7 +14,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Robot } from "./Robot";
 import { DashboardState } from "@/lib/reducer";
-import { StatusDot } from "./ui";
+import { SourceBadge, StatusDot } from "./ui";
+import { Origin } from "@/lib/provenance";
 
 function OverlayRow({ k, v, tone }: { k: string; v: string; tone?: string }) {
   return (
@@ -27,7 +28,7 @@ function OverlayRow({ k, v, tone }: { k: string; v: string; tone?: string }) {
   );
 }
 
-export function StageView({ state }: { state: DashboardState }) {
+export function StageView({ state, origin }: { state: DashboardState; origin?: Origin }) {
   const [videoFailed, setVideoFailed] = useState(false);
 
   // A new clip deserves a fresh attempt at loading.
@@ -96,6 +97,7 @@ export function StageView({ state }: { state: DashboardState }) {
             <span className="label text-[var(--color-ink)]">
               {state.environment === "real" ? "Real SO-101" : "Antioch · Isaac"}
             </span>
+            {origin && <SourceBadge origin={origin} />}
           </div>
           {state.criticRunning && (
             <span className="label blink text-[var(--color-accent)]">critic analysing…</span>

@@ -14,6 +14,7 @@ import { useState } from "react";
 import { CONFIDENCE_FLOOR, stageTimeline } from "@/lib/contract";
 import { DashboardState } from "@/lib/reducer";
 import { Awaiting, Meter, Panel } from "./ui";
+import { Origin } from "@/lib/provenance";
 
 const MARK = { passed: "✓", failed: "✗", not_reached: "–" } as const;
 const TONE = {
@@ -22,13 +23,14 @@ const TONE = {
   not_reached: "text-[var(--color-dim)]",
 } as const;
 
-export function FailurePanel({ state }: { state: DashboardState }) {
+export function FailurePanel({ state, origin }: { state: DashboardState; origin?: Origin }) {
   const [showRaw, setShowRaw] = useState(false);
   const d = state.diagnosis;
 
   return (
     <Panel
       title={d?.success ? "Rollout verdict" : "Real-world failure"}
+      origin={origin}
       live={state.criticRunning}
       right={
         d && (
