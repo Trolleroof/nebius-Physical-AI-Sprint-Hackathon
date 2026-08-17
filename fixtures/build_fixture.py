@@ -207,6 +207,15 @@ payload = {
     "events": [json.loads(e.model_dump_json()) for e in events],
 }
 
-out = Path(__file__).resolve().parent / "demo_run.json"
-out.write_text(json.dumps(payload, indent=2) + "\n")
-print(f"wrote {out.relative_to(Path.cwd())}  ({len(events)} events, {payload['meta']['duration_s']}s)")
+blob = json.dumps(payload, indent=2) + "\n"
+root = Path(__file__).resolve().parent.parent
+
+# Written twice on purpose: this file is the source of truth, and the copy
+# under frontend/public is what the browser fetches. Regenerate rather than
+# editing either by hand.
+targets = [root / "fixtures" / "demo_run.json", root / "frontend" / "public" / "fixtures" / "demo_run.json"]
+for target in targets:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(blob)
+    print(f"wrote {target.relative_to(root)}")
+print(f"{len(events)} events, {payload['meta']['duration_s']}s of scripted time")
