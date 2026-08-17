@@ -67,8 +67,11 @@ Rules:
   grasp_offset), each with its own confidence.
 - `recommended_sim_changes` may only name these parameters, which are the
   keyword arguments of the simulated task:
-  block_x, block_y (block position on the table, metres)
-  tray_x, tray_y (tray centre position, metres)
+  block_azimuth (bearing from the arm's base to the block, radians)
+  tray_azimuth (bearing from the arm's base to the tray, radians)
+  The arm reaches a fixed radius, so only bearings vary. If the cause you
+  suspect is radial, or about friction, mass or timing, say so in
+  `estimated_causes` and leave `recommended_sim_changes` empty.
   If the physical cause you suspect has no parameter here, say so in
   `estimated_causes` and leave `recommended_sim_changes` empty rather than
   naming a parameter that does not exist.
@@ -104,10 +107,10 @@ class MockCritic:
                     {"cause": "reach_error", "confidence": 0.24},
                 ],
                 "recommended_sim_changes": [
-                    {"parameter": "block_y", "min": -0.17, "max": -0.10},
-                    # Deliberately near-full-range: exercises the mapper's
+                    # Deliberately the full legal span: exercises the mapper's
                     # rejection of uninformative recommendations on every run.
-                    {"parameter": "block_x", "min": 0.10, "max": 0.50},
+                    {"parameter": "block_azimuth", "min": -0.9, "max": 0.9},
+
                 ],
                 "summary": (
                     "The gripper closed beside the block rather than around "

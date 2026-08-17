@@ -67,25 +67,22 @@ class SimParameter(str, Enum):
     Antioch rejects an unknown ``--set`` key at dispatch, so a parameter
     invented here would surface as a hard failure rather than a silent no-op.
 
-    Anything not on this list cannot currently be varied. Notably absent:
-    friction, mass, object yaw, and any injected noise. Adding one means
-    adding a typed keyword argument to the scenario first.
+    The scenario is a scripted joint-space expert that reaches a fixed
+    radius, so only the *bearing* to the block and tray can vary — there is
+    no radial distance, friction, mass, yaw or injected noise. Adding one
+    means adding a typed keyword argument to the scenario first.
     """
 
-    BLOCK_X = "block_x"
-    BLOCK_Y = "block_y"
-    TRAY_X = "tray_x"
-    TRAY_Y = "tray_y"
+    BLOCK_AZIMUTH = "block_azimuth"
+    TRAY_AZIMUTH = "tray_azimuth"
 
 
 #: Hard limits per parameter, as ``(floor, ceiling, unit)``, taken from the
 #: ``ge=``/``le=`` on each ``antioch.param`` in the scenario. The critic may
 #: recommend anything; the mapper clamps into these before Antioch sees them.
 PARAMETER_BOUNDS: dict[SimParameter, tuple[float, float, str]] = {
-    SimParameter.BLOCK_X: (0.10, 0.50, "m"),
-    SimParameter.BLOCK_Y: (-0.40, 0.40, "m"),
-    SimParameter.TRAY_X: (0.10, 0.50, "m"),
-    SimParameter.TRAY_Y: (-0.40, 0.40, "m"),
+    SimParameter.BLOCK_AZIMUTH: (-0.9, 0.9, "rad"),
+    SimParameter.TRAY_AZIMUTH: (-0.9, 0.9, "rad"),
 }
 
 

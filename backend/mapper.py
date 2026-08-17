@@ -29,10 +29,8 @@ from schemas import (
 #: Nominal scenario values — the defaults on ``so101_pick_place``. The
 #: dashboard renders these as the "before" side of `0.32 -> 0.24-0.40`.
 BASELINE_SCENARIO: dict[SimParameter, float] = {
-    SimParameter.BLOCK_X: 0.3464,
-    SimParameter.BLOCK_Y: -0.1361,
-    SimParameter.TRAY_X: 0.3395,
-    SimParameter.TRAY_Y: 0.1744,
+    SimParameter.BLOCK_AZIMUTH: -0.3157,
+    SimParameter.TRAY_AZIMUTH: 0.5225,
 }
 
 #: Fallback curriculum per failure mode, in the spirit of plan section 10 but
@@ -46,30 +44,24 @@ BASELINE_SCENARIO: dict[SimParameter, float] = {
 #: an empty curriculum, and the dashboard says so rather than inventing work.
 #: Extending coverage means adding a typed parameter to the scenario first.
 RULES: dict[FailureMode, list[tuple[SimParameter, float, float]]] = {
-    # Ranges hug the scenario's own declared sweep cases (block_x 0.31-0.37,
-    # block_y -0.16..-0.12) rather than the legal bounds. The legal range is
-    # 0.10-0.50, but the arm is a scripted joint-space expert reaching a known
-    # radius, so sampling the full span would mostly generate poses it cannot
-    # reach — noise, not curriculum.
+    # The scenario declares four sweep cases from -0.42 to -0.12 rad, which is
+    # the bearing band the expert is known to reach. Rules stay near it: the
+    # legal range is +/-0.9, but sampling the whole span mostly produces poses
+    # the arm cannot make, which is noise rather than curriculum.
     FailureMode.FAILED_GRASP: [
-        (SimParameter.BLOCK_X, 0.31, 0.37),
-        (SimParameter.BLOCK_Y, -0.17, -0.10),
+        (SimParameter.BLOCK_AZIMUTH, -0.42, -0.12),
     ],
     FailureMode.MISSED_OBJECT: [
-        (SimParameter.BLOCK_X, 0.29, 0.39),
-        (SimParameter.BLOCK_Y, -0.20, -0.08),
+        (SimParameter.BLOCK_AZIMUTH, -0.52, -0.05),
     ],
     FailureMode.BAD_ALIGNMENT: [
-        (SimParameter.BLOCK_X, 0.32, 0.37),
-        (SimParameter.BLOCK_Y, -0.16, -0.11),
+        (SimParameter.BLOCK_AZIMUTH, -0.40, -0.20),
     ],
     FailureMode.UNREACHABLE_POSE: [
-        (SimParameter.BLOCK_X, 0.28, 0.42),
-        (SimParameter.BLOCK_Y, -0.22, -0.06),
+        (SimParameter.BLOCK_AZIMUTH, -0.62, 0.05),
     ],
     FailureMode.PLACEMENT_ERROR: [
-        (SimParameter.TRAY_X, 0.30, 0.38),
-        (SimParameter.TRAY_Y, 0.13, 0.22),
+        (SimParameter.TRAY_AZIMUTH, 0.40, 0.64),
     ],
 }
 
@@ -80,20 +72,21 @@ RULES: dict[FailureMode, list[tuple[SimParameter, float, float]]] = {
 UNMAPPABLE: dict[FailureMode, str] = {
     FailureMode.OBJECT_SLIP: "needs a friction or mass parameter on so101_pick_place",
     FailureMode.PREMATURE_RELEASE: "needs a grip-force or actuation-timing parameter",
-    FailureMode.COLLISION: "needs a traverse-height parameter; travel_z was removed "
-    "when the scenario moved to a scripted joint-space expert",
+    FailureMode.COLLISION: "needs a traverse-height parameter",
 }
 
 #: Causes the critic names in prose, mapped to the knob they implicate. Lets a
 #: confident cause pull in a parameter the failure-mode rule alone would miss.
+#: Only bearings can vary, so a cause implying radial distance ("too far to
+#: reach") has no knob and is deliberately absent rather than mapped to the
+#: nearest thing that happens to exist.
 CAUSE_HINTS: dict[str, SimParameter] = {
-    "object_pose": SimParameter.BLOCK_X,
-    "block_position": SimParameter.BLOCK_X,
-    "reach_error": SimParameter.BLOCK_X,
-    "lateral_offset": SimParameter.BLOCK_Y,
-    "depth_error": SimParameter.BLOCK_Y,
-    "tray_position": SimParameter.TRAY_X,
-    "placement_offset": SimParameter.TRAY_Y,
+    "object_pose": SimParameter.BLOCK_AZIMUTH,
+    "block_position": SimParameter.BLOCK_AZIMUTH,
+    "lateral_offset": SimParameter.BLOCK_AZIMUTH,
+    "bearing_error": SimParameter.BLOCK_AZIMUTH,
+    "tray_position": SimParameter.TRAY_AZIMUTH,
+    "placement_offset": SimParameter.TRAY_AZIMUTH,
 }
 
 #: A cause below this confidence does not get to add a parameter of its own.
@@ -146,11 +139,13 @@ def map_diagnosis(diagnosis: FailureDiagnosis) -> list[SimChange]:
         requested_span = abs(change.max - change.min)
 
         # A near-full-range request tells us nothing about where the policy is
-        # weak, so fall through to the targeted rule if one exists.
+        # weak. Prefer the targeted rule; if there is no rule, drop it rather
+        # than accept it. "Vary this across its entire range" is not a weaker
+        # curriculum than nothing, it is worse than nothing — it spends the
+        # whole batch on scenarios the diagnosis never implicated.
         if legal_span > 0 and requested_span / legal_span > MAX_RECOMMENDED_SPAN:
-            if change.parameter in rule_for:
-                overridden.add(change.parameter)
-                continue
+            overridden.add(change.parameter)
+            continue
         proposals.setdefault(change.parameter, (change.min, change.max))
 
     for parameter, (low, high) in rule_for.items():

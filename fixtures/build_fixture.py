@@ -59,7 +59,7 @@ RUN_ID = "demo-fixture-001"
 T0 = 1_755_432_600.0  # fixed epoch; keeps regenerated fixtures diff-clean
 
 #: The controlled out-of-distribution condition from plan section 8.
-CONDITION = "block +6cm right of its trained position"
+CONDITION = "block bearing 0.10 rad outside the trained band"
 
 #: Which of the 30 targeted scenarios fail. Fixed, not random, so the batch
 #: grid renders identically on every replay.
@@ -118,12 +118,12 @@ diagnosis = FailureDiagnosis(
         EstimatedCause(cause="other", confidence=0.07),
     ],
     recommended_sim_changes=[
-        SimChange(parameter=SimParameter.BLOCK_Y, min=-0.17, max=-0.10),
+        SimChange(parameter=SimParameter.BLOCK_AZIMUTH, min=-0.42, max=-0.12),
         # Deliberately near-full-range: the critic asks to vary pick_x across
         # almost its entire legal span, which says nothing about where the
         # policy is weak. The mapper rejects it for the targeted rule and
         # flags the override, so the guardrail is visible on screen.
-        SimChange(parameter=SimParameter.BLOCK_X, min=0.10, max=0.50),
+        SimChange(parameter=SimParameter.TRAY_AZIMUTH, min=-0.9, max=0.9),
     ],
     summary="The gripper closed beside the block rather than around it, catching only its near edge.",
 )
@@ -136,10 +136,10 @@ emit(
         run_id=RUN_ID,
         curriculum_id="curr-001",
         n_scenarios=30,
-        baseline={"block_y": -0.1361, "block_x": 0.3464},
+        baseline={"block_azimuth": -0.3157},
         changes=[
-            SimChange(parameter=SimParameter.BLOCK_Y, min=-0.17, max=-0.10),
-            SimChange(parameter=SimParameter.BLOCK_X, min=0.31, max=0.37, clamped=True),
+            SimChange(parameter=SimParameter.BLOCK_AZIMUTH, min=-0.42, max=-0.12),
+            SimChange(parameter=SimParameter.BLOCK_AZIMUTH, min=-0.42, max=-0.12, clamped=True),
         ],
     ),
     gap=1.1,
