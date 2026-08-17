@@ -130,6 +130,7 @@ export type RobotEvent = Envelope &
         changes: SimChange[];
         n_scenarios: number;
         baseline: Record<string, number>;
+        unmappable_reason: string | null;
       }
     | { type: "batch_started"; curriculum_id: string; n_scenarios: number }
     | { type: "batch_progress"; index: number; total: number; success: boolean; thumbnail_url: string | null }

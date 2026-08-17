@@ -24,6 +24,14 @@ export type Source = "probing" | "live" | "fixture";
 
 export interface RunControls extends ReplayControls {
   source: Source;
+  /**
+   * Pin the source by hand, or pass null to go back to auto-detection.
+   *
+   * This is the fallback ladder as a single control: if the live run wedges
+   * in front of a judge, one keypress drops to the recorded story mid-
+   * sentence without reloading anything.
+   */
+  forceSource: (source: Source | null) => void;
 }
 
 function useLive(enabled: boolean) {
@@ -64,15 +72,17 @@ function useLive(enabled: boolean) {
 }
 
 export function useRun(): RunControls {
-  const [source, setSource] = useState<Source>("probing");
+  const [detected, setDetected] = useState<Source>("probing");
+  const [pinned, setPinned] = useState<Source | null>(null);
+  const source = pinned ?? detected;
 
   useEffect(() => {
     const abort = new AbortController();
     const timer = setTimeout(() => abort.abort(), PROBE_TIMEOUT_MS);
 
     fetch(`${API}/healthz`, { signal: abort.signal })
-      .then((r) => setSource(r.ok ? "live" : "fixture"))
-      .catch(() => setSource("fixture"))
+      .then((r) => setDetected(r.ok ? "live" : "fixture"))
+      .catch(() => setDetected("fixture"))
       .finally(() => clearTimeout(timer));
 
     return () => {
@@ -81,11 +91,18 @@ export function useRun(): RunControls {
     };
   }, []);
 
+  const forceSource = useCallback((next: Source | null) => setPinned(next), []);
+
   const fixture = useReplay();
   const live = useLive(source === "live");
 
   if (source !== "live") {
-    return { ...fixture, source, isFixture: source === "fixture" && fixture.isFixture };
+    return {
+      ...fixture,
+      source,
+      forceSource,
+      isFixture: source === "fixture" && fixture.isFixture,
+    };
   }
 
   // Live mode has no timeline to scrub, so the transport controls become
@@ -93,6 +110,7 @@ export function useRun(): RunControls {
   return {
     ...fixture,
     source,
+    forceSource,
     state: live.state,
     events: live.events,
     index: live.events.length,

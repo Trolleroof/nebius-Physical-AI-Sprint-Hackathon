@@ -58,7 +58,20 @@ export function RealityToSim({ state }: { state: DashboardState }) {
             </div>
           )}
 
-          {curriculum && (
+          {curriculum?.unmappableReason && (
+            <div className="space-y-1 border-t border-[var(--color-warn)]/30 pt-2">
+              <span className="label text-[var(--color-warn)]">no curriculum generated</span>
+              <p className="text-[11px] leading-snug text-[var(--color-muted)]">
+                The simulator cannot reproduce this failure — {curriculum.unmappableReason}.
+              </p>
+              <p className="font-mono text-[9px] text-[var(--color-dim)]">
+                Reported rather than guessed: a curriculum that does not address the
+                diagnosis would be worse than none.
+              </p>
+            </div>
+          )}
+
+          {curriculum && curriculum.changes.length > 0 && (
             <div className="space-y-2 border-t border-[var(--color-line)] pt-2">
               <span className="label">new curriculum</span>
               {curriculum.changes.map((change, i) => {

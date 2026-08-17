@@ -43,6 +43,7 @@ export interface DashboardState {
     changes: SimChange[];
     baseline: Record<string, number>;
     nScenarios: number;
+    unmappableReason: string | null;
   } | null;
 
   /** One slot per targeted scenario; null until that scenario reports. */
@@ -187,6 +188,7 @@ export function reduce(state: DashboardState, event: RobotEvent): DashboardState
         changes: event.changes,
         baseline: event.baseline,
         nScenarios: event.n_scenarios,
+        unmappableReason: event.unmappable_reason ?? null,
       };
       break;
 
