@@ -15,6 +15,16 @@ Environment is already built. Everything below runs in the `lerobot` conda env.
 conda activate lerobot
 ```
 
+**Install the feetech extra, not plain lerobot.** `pip install lerobot` does not pull
+`scservo_sdk`, so every SO-101 command dies with `ModuleNotFoundError: No module
+named 'scservo_sdk'` the moment it opens the servo bus -- including
+`lerobot-calibrate`. The base install looks fine until then, because the robot
+classes import without it.
+
+```bash
+pip install "lerobot[feetech]==0.4.4"
+```
+
 ## Step 2 — find the serial ports
 
 Plug in one arm at a time.
