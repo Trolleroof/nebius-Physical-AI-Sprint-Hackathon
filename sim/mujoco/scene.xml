@@ -1,0 +1,85 @@
+<mujoco model="so101_pick_place">
+  <!-- SO-101 pick-and-place task scene.
+       Robot comes from robotstudio_so101/so101.xml (LeRobot / MuJoCo Menagerie).
+       Do NOT retune gripper contact parameters here - they are pre-tuned in so101.xml. -->
+
+  <include file="robotstudio_so101/so101.xml"/>
+
+  <!-- Must come AFTER the include so the mesh search path is re-rooted at the
+       robot's asset folder (so101.xml declares meshdir="assets" relative to
+       itself, which does not exist next to this file). -->
+  <compiler angle="radian" autolimits="true" meshdir="robotstudio_so101/assets"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="160" elevation="-20" offwidth="640" offheight="480"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.85 0.82 0.78" rgb2="0.55 0.52 0.48" width="512" height="3072"/>
+    <!-- Wood-toned floor matching the real bamboo table (was blue checker tiles). -->
+    <texture type="2d" name="groundplane" builtin="checker" mark="none" rgb1="0.72 0.55 0.36" rgb2="0.68 0.51 0.32"
+      width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="8 8" reflectance="0.05"/>
+    <material name="cube_mat" rgba="1 0.45 0.05 1"/>
+    <material name="wood" rgba="0.55 0.36 0.20 1"/>
+    <material name="wood_dark" rgba="0.40 0.25 0.13 1"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 3.5" dir="0 0 -1" directional="true"/>
+    <light pos="0.6 -0.6 1.0" dir="-0.5 0.5 -1" diffuse="0.4 0.4 0.4" specular="0.1 0.1 0.1"/>
+    <geom name="floor" size="0 0 0.05" pos="0 0 0" type="plane" material="groundplane"/>
+
+    <!-- World camera: eye ~[0.85,-0.45,0.55] looking at the workspace centre. -->
+    <camera name="world" pos="0.85 -0.45 0.55"
+      xyaxes="0.53114 0.84729 0.00000 -0.45923 0.28788 0.84038"/>
+
+    <!-- 40 mm orange-red cube on the reachable arc (azimuth +15 deg, r = 0.2114 m,
+         which is the measured top-down graspable radius of the pickup pose). -->
+    <body name="cube" pos="0.20419 0.05471 0.02">
+      <freejoint name="cube_free"/>
+      <inertial pos="0 0 0" mass="0.03" diaginertia="8e-6 8e-6 8e-6"/>
+      <geom name="cube" type="box" size="0.02 0.02 0.02" material="cube_mat"
+        condim="3" friction="1 0.03 0.003" solref="0.01 1"/>
+    </body>
+
+    <!-- Wooden tray: 5 static boxes, outer 0.21 x 0.14 m — a scaled copy of the
+         real 16.5 x 11 inch serving tray (3:2 proportions), sized to fit the
+         arm's reach. floor_thickness=0.006, wall_height=0.030, thickness=0.012.
+         Placed on the reachable arc at azimuth -45 deg, r = 0.24 m. -->
+    <body name="tray" pos="0.16971 -0.16971 0">
+      <geom name="tray_floor" type="box" size="0.105 0.07 0.003" pos="0 0 0.003" material="wood_dark"/>
+      <geom name="tray_wall_x_min" type="box" size="0.006 0.07 0.015" pos="-0.099 0 0.021" material="wood"/>
+      <geom name="tray_wall_x_max" type="box" size="0.006 0.07 0.015" pos="0.099 0 0.021" material="wood"/>
+      <geom name="tray_wall_y_min" type="box" size="0.093 0.006 0.015" pos="0 -0.064 0.021" material="wood"/>
+      <geom name="tray_wall_y_max" type="box" size="0.093 0.006 0.015" pos="0 0.064 0.021" material="wood"/>
+      <site name="tray_center" pos="0 0 0.006" size="0.005" group="3"/>
+    </body>
+  </worldbody>
+
+  <keyframe>
+    <!-- qpos layout (13) = [shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll, gripper,
+                            cube_x, cube_y, cube_z, cube_qw, cube_qx, cube_qy, cube_qz]
+
+         Arm approach pose is the one from robotstudio_so101/scene_box.xml
+         ("pickup", near-vertical top-down approach at r = 0.211 m). -->
+
+    <!-- Jaws OPEN (0.9 rad, ~91 mm tip gap) straddling the cube, cube on the ground. -->
+    <key name="pregrasp"
+      qpos="0 0.000381818 0.473496 1.17717 1.58437 0.9 0.20883 0.032665 0.02 1 0 0 0"
+      ctrl="0 0.000381818 0.473496 1.17717 1.58437 0.9"/>
+
+    <!-- Settled closed grasp on the 40 mm cube (measured: joint stalls at 0.312 rad
+         against the cube while the actuator is commanded to 0.0). -->
+    <key name="pickup"
+      qpos="-0.0565599 -0.0383357 0.470862 1.17704 1.58437 0.31205 0.208582 0.0215062 0.0178484 0.998807 0.0481039 0.0020897 -0.00812878"
+      ctrl="0 0.000381818 0.473496 1.17717 1.58437 0"/>
+
+    <!-- Neutral arm pose, cube and tray at their scene defaults. -->
+    <key name="home"
+      qpos="0 -1.5 1.5 0.8 0 1.0 0.20419 0.05471 0.02 1 0 0 0"
+      ctrl="0 -1.5 1.5 0.8 0 1.0"/>
+  </keyframe>
+</mujoco>

@@ -24,3 +24,7 @@ er2/*.jpg
 .uv-cache/
 .mypy_cache/
 .pytest_cache/
+
+# Local MuJoCo tooling: venv and debug renders
+sim/mujoco_venv/
+sim/mujoco/*.png
